@@ -1,4 +1,4 @@
--- Noob Hub | Immune Head-Anchor Utility GUI
+-- Noob Hub | Complete Unified Immune Head-Anchor & Weapon Support GUI
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -22,8 +22,10 @@ local connectionLoop = nil
 local bringLoop = nil
 local godConnection = nil
 
--- Weapon Priority List
+-- Upgraded Weapon Priority List (GoldenClaws & UltraFish Added)
 local WEAPON_PRIORITY = {
+    "GoldenClaws",
+    "UltraFish",
     "TormentumAxe",
     "Murasama",
     "Ruinstrikers",
@@ -31,15 +33,15 @@ local WEAPON_PRIORITY = {
 }
 
 --------------------------------------------------------------------------------
--- HELPER: IMMUNE HEAD-ANCHOR TELEPORT
+-- CORE IMMUNE HEAD-ANCHOR LOGIC
 --------------------------------------------------------------------------------
 local function findBossRoot()
     for _, obj in ipairs(Workspace:GetDescendants()) do
         if obj:IsA("Model") and (obj.Name == TARGET_NAME or string.lower(obj.Name) == string.lower(TARGET_NAME)) then
-            local targetPart = obj:FindFirstChild("HumanoidRootPart") 
-                or obj:FindFirstChild("Head")
-                or obj:FindFirstChild("Torso") 
+            local targetPart = obj:FindFirstChild("Head")
+                or obj:FindFirstChild("HumanoidRootPart") 
                 or obj:FindFirstChild("UpperTorso") 
+                or obj:FindFirstChild("Torso") 
                 or obj.PrimaryPart
             
             if targetPart then
@@ -63,26 +65,26 @@ local function applyImmuneHeadAnchor(targetModel, targetRoot)
         end
     end
 
-    -- 2. Strip touch triggers from THE_RAKE so his attacks cannot register contact
+    -- 2. Strip active touch triggers on target model
     for _, descendant in ipairs(targetModel:GetDescendants()) do
         if descendant:IsA("TouchTransmitter") or descendant.Name == "TouchInterest" then
             descendant:Destroy()
         end
     end
 
-    -- 3. Lock position directly on top of the head/top-part
+    -- 3. Pure Global Vertical Vector Placement (Forces position straight above head)
     local headPart = targetModel:FindFirstChild("Head") or targetRoot
-    local heightOffset = (headPart.Size.Y / 2) + 3.5
-    local topPosition = headPart.Position + Vector3.new(0, heightOffset, 0)
+    local absoluteTopPosition = headPart.Position + Vector3.new(0, 5, 0)
 
-    hrp.CFrame = CFrame.new(topPosition, topPosition + headPart.CFrame.LookVector)
+    -- Force CFrame directly above head looking down
+    hrp.CFrame = CFrame.new(absoluteTopPosition, headPart.Position)
 end
 
 --------------------------------------------------------------------------------
 -- 1. FANCY GRADIENT GUI SETUP
 --------------------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "NoobHubImmune"
+ScreenGui.Name = "NoobHubImmuneHead"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = PlayerGui
 
@@ -112,6 +114,7 @@ FrameStroke.Color = Color3.fromRGB(160, 32, 240)
 FrameStroke.Transparency = 0.2
 FrameStroke.Parent = MainFrame
 
+-- Header Bar
 local TitleBar = Instance.new("Frame")
 TitleBar.Size = UDim2.new(1, 0, 0, 50)
 TitleBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -144,13 +147,13 @@ local SubLabel = Instance.new("TextLabel")
 SubLabel.Size = UDim2.new(0, 110, 0, 35)
 SubLabel.Position = UDim2.new(1, -115, 0, 7)
 SubLabel.BackgroundTransparency = 1
-SubLabel.Text = "( immune-head )"
+SubLabel.Text = "( head-lock )"
 SubLabel.TextColor3 = Color3.fromRGB(180, 120, 255)
 SubLabel.Font = Enum.Font.Code
 SubLabel.TextSize = 12
 SubLabel.Parent = TitleBar
 
--- Dragging System
+-- Dragging Logic
 local dragging, dragInput, dragStart, startPos
 
 TitleBar.InputBegan:Connect(function(input)
@@ -236,7 +239,7 @@ end
 local CaveABtn = CreateButton("⛰️ Teleport to Cave A", 1)
 local CaveBBtn = CreateButton("⛰️ Teleport to Cave B", 2)
 local SafezoneBtn = CreateButton("🛡️ Safezone Teleport", 3)
-local TPBtn = CreateButton("🎯 Teleport to Head (Immune)", 4)
+local TPBtn = CreateButton("🎯 Teleport Above Head", 4)
 local AutoKillBtn, AutoKillGrad = CreateButton("⚔️ Auto Kill THE_RAKE: OFF", 5)
 local GodModeBtn, GodGrad = CreateButton("🛡️ God Mode: OFF", 6)
 local BringBtn, BringGrad = CreateButton("🧲 Bring THE_RAKE: OFF", 7)
@@ -321,7 +324,7 @@ SafezoneBtn.MouseButton1Click:Connect(function()
 end)
 
 --------------------------------------------------------------------------------
--- 5. GOD MODE & AUTO KILL
+-- 5. GOD MODE & AUTO KILL (WITH GOLDENCLAWS / ULTRAFISH SUPPORT)
 --------------------------------------------------------------------------------
 GodModeBtn.MouseButton1Click:Connect(function()
     GODMODE_ENABLED = not GODMODE_ENABLED
@@ -373,6 +376,12 @@ local function equipAndAttack()
             humanoid:EquipTool(bestTool)
         end
         bestTool:Activate()
+
+        local remote = bestTool:FindFirstChildOfClass("RemoteEvent") 
+            or bestTool:FindFirstChildOfClass("BindableEvent")
+        if remote then
+            remote:FireServer()
+        end
     end
 end
 
