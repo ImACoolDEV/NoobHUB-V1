@@ -1,4 +1,4 @@
--- Noob Hub | Gradient Utility GUI
+-- Noob Hub | Immune Head-Anchor Utility GUI
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -31,30 +31,13 @@ local WEAPON_PRIORITY = {
 }
 
 --------------------------------------------------------------------------------
--- HELPER FUNCTIONS
+-- HELPER: IMMUNE HEAD-ANCHOR TELEPORT
 --------------------------------------------------------------------------------
-local function safeTeleportBehind(targetRoot)
-    local character = LocalPlayer.Character
-    if not character then return end
-    local hrp = character:FindFirstChild("HumanoidRootPart")
-    if not hrp or not targetRoot then return end
-
-    for _, part in ipairs(character:GetChildren()) do
-        if part:IsA("BasePart") then
-            part.CanCollide = false
-        end
-    end
-
-    local targetCF = targetRoot.CFrame
-    local behindPosition = targetCF.Position - (targetCF.LookVector * 3.5)
-    
-    hrp.CFrame = CFrame.new(behindPosition, targetCF.Position)
-end
-
 local function findBossRoot()
     for _, obj in ipairs(Workspace:GetDescendants()) do
         if obj:IsA("Model") and (obj.Name == TARGET_NAME or string.lower(obj.Name) == string.lower(TARGET_NAME)) then
             local targetPart = obj:FindFirstChild("HumanoidRootPart") 
+                or obj:FindFirstChild("Head")
                 or obj:FindFirstChild("Torso") 
                 or obj:FindFirstChild("UpperTorso") 
                 or obj.PrimaryPart
@@ -67,11 +50,39 @@ local function findBossRoot()
     return nil, nil
 end
 
+local function applyImmuneHeadAnchor(targetModel, targetRoot)
+    local character = LocalPlayer.Character
+    if not character then return end
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp or not targetRoot then return end
+
+    -- 1. Disable character collisions to bypass physical hitboxes completely
+    for _, part in ipairs(character:GetChildren()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = false
+        end
+    end
+
+    -- 2. Strip touch triggers from THE_RAKE so his attacks cannot register contact
+    for _, descendant in ipairs(targetModel:GetDescendants()) do
+        if descendant:IsA("TouchTransmitter") or descendant.Name == "TouchInterest" then
+            descendant:Destroy()
+        end
+    end
+
+    -- 3. Lock position directly on top of the head/top-part
+    local headPart = targetModel:FindFirstChild("Head") or targetRoot
+    local heightOffset = (headPart.Size.Y / 2) + 3.5
+    local topPosition = headPart.Position + Vector3.new(0, heightOffset, 0)
+
+    hrp.CFrame = CFrame.new(topPosition, topPosition + headPart.CFrame.LookVector)
+end
+
 --------------------------------------------------------------------------------
--- 1. FANCY NOOB HUB GRADIENT GUI
+-- 1. FANCY GRADIENT GUI SETUP
 --------------------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "NoobHubGradient"
+ScreenGui.Name = "NoobHubImmune"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = PlayerGui
 
@@ -83,7 +94,6 @@ MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Parent = ScreenGui
 
--- Main Frame Gradient (Purple to Neon Blue)
 local MainGradient = Instance.new("UIGradient")
 MainGradient.Color = ColorSequence.new({
     ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 15, 40)),
@@ -102,7 +112,6 @@ FrameStroke.Color = Color3.fromRGB(160, 32, 240)
 FrameStroke.Transparency = 0.2
 FrameStroke.Parent = MainFrame
 
--- Header Bar
 local TitleBar = Instance.new("Frame")
 TitleBar.Size = UDim2.new(1, 0, 0, 50)
 TitleBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -135,13 +144,13 @@ local SubLabel = Instance.new("TextLabel")
 SubLabel.Size = UDim2.new(0, 110, 0, 35)
 SubLabel.Position = UDim2.new(1, -115, 0, 7)
 SubLabel.BackgroundTransparency = 1
-SubLabel.Text = "( noob-power )"
+SubLabel.Text = "( immune-head )"
 SubLabel.TextColor3 = Color3.fromRGB(180, 120, 255)
 SubLabel.Font = Enum.Font.Code
 SubLabel.TextSize = 12
 SubLabel.Parent = TitleBar
 
--- Dragging Logic
+-- Dragging System
 local dragging, dragInput, dragStart, startPos
 
 TitleBar.InputBegan:Connect(function(input)
@@ -171,7 +180,6 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Layout Container
 local Container = Instance.new("Frame")
 Container.Size = UDim2.new(1, 0, 1, -55)
 Container.Position = UDim2.new(0, 0, 0, 55)
@@ -185,9 +193,9 @@ UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 UIListLayout.Parent = Container
 
 --------------------------------------------------------------------------------
--- 2. GRADIENT BUTTON BUILDER
+-- 2. BUTTON BUILDER
 --------------------------------------------------------------------------------
-local function CreateButton(text, order, isToggle)
+local function CreateButton(text, order)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(0.92, 0, 0, 38)
     btn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -216,14 +224,10 @@ local function CreateButton(text, order, isToggle)
     stroke.Parent = btn
 
     btn.MouseEnter:Connect(function()
-        TweenService:Create(btnGradient, TweenInfo.new(0.2), {
-            Rotation = 90
-        }):Play()
+        TweenService:Create(btnGradient, TweenInfo.new(0.2), {Rotation = 90}):Play()
     end)
     btn.MouseLeave:Connect(function()
-        TweenService:Create(btnGradient, TweenInfo.new(0.2), {
-            Rotation = 0
-        }):Play()
+        TweenService:Create(btnGradient, TweenInfo.new(0.2), {Rotation = 0}):Play()
     end)
     
     return btn, btnGradient
@@ -232,7 +236,7 @@ end
 local CaveABtn = CreateButton("⛰️ Teleport to Cave A", 1)
 local CaveBBtn = CreateButton("⛰️ Teleport to Cave B", 2)
 local SafezoneBtn = CreateButton("🛡️ Safezone Teleport", 3)
-local TPBtn = CreateButton("🎯 Teleport Behind THE_RAKE", 4)
+local TPBtn = CreateButton("🎯 Teleport to Head (Immune)", 4)
 local AutoKillBtn, AutoKillGrad = CreateButton("⚔️ Auto Kill THE_RAKE: OFF", 5)
 local GodModeBtn, GodGrad = CreateButton("🛡️ God Mode: OFF", 6)
 local BringBtn, BringGrad = CreateButton("🧲 Bring THE_RAKE: OFF", 7)
@@ -251,7 +255,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 --------------------------------------------------------------------------------
--- 4. TELEPORT LOCATIONS
+-- 4. TELEPORTS
 --------------------------------------------------------------------------------
 local function findLocationPart(targetName)
     local miscFolder = Workspace:FindFirstChild("Misc")
@@ -317,7 +321,7 @@ SafezoneBtn.MouseButton1Click:Connect(function()
 end)
 
 --------------------------------------------------------------------------------
--- 5. GOD MODE
+-- 5. GOD MODE & AUTO KILL
 --------------------------------------------------------------------------------
 GodModeBtn.MouseButton1Click:Connect(function()
     GODMODE_ENABLED = not GODMODE_ENABLED
@@ -338,9 +342,6 @@ GodModeBtn.MouseButton1Click:Connect(function()
     end
 end)
 
---------------------------------------------------------------------------------
--- 6. AUTO KILL (THE_RAKE)
---------------------------------------------------------------------------------
 local function getBestWeapon()
     local character = LocalPlayer.Character
     local backpack = LocalPlayer:FindFirstChild("Backpack")
@@ -376,8 +377,8 @@ local function equipAndAttack()
 end
 
 TPBtn.MouseButton1Click:Connect(function()
-    local _, bossRoot = findBossRoot()
-    if bossRoot then safeTeleportBehind(bossRoot) end
+    local bossModel, bossRoot = findBossRoot()
+    if bossModel and bossRoot then applyImmuneHeadAnchor(bossModel, bossRoot) end
 end)
 
 AutoKillBtn.MouseButton1Click:Connect(function()
@@ -387,9 +388,9 @@ AutoKillBtn.MouseButton1Click:Connect(function()
     
     if AUTO_KILL_ENABLED then
         connectionLoop = RunService.Heartbeat:Connect(function()
-            local _, bossRoot = findBossRoot()
-            if bossRoot then
-                safeTeleportBehind(bossRoot)
+            local bossModel, bossRoot = findBossRoot()
+            if bossModel and bossRoot then
+                applyImmuneHeadAnchor(bossModel, bossRoot)
                 equipAndAttack()
             end
         end)
@@ -399,7 +400,7 @@ AutoKillBtn.MouseButton1Click:Connect(function()
 end)
 
 --------------------------------------------------------------------------------
--- 7. UTILITIES (BRING, HITBOX, SPEED, FULLBRIGHT)
+-- 6. MISC UTILITIES
 --------------------------------------------------------------------------------
 BringBtn.MouseButton1Click:Connect(function()
     BRING_BOSS_ENABLED = not BRING_BOSS_ENABLED
