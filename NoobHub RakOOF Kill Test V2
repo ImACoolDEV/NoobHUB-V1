@@ -1,4 +1,4 @@
--- Noob Hub | Sideways Layout, Mobile Supported & Custom Item Auto-Pickup/Teleport
+-- Noob Hub | Sideways Layout, Mobile Supported & Custom Item Auto-Pickup (With ESP Highlights)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -23,6 +23,7 @@ local connectionLoop = nil
 local bringLoop = nil
 local godConnection = nil
 local pickupLoop = nil
+local espConnection = nil
 
 -- Target Item Names for Auto-Pickup (Must be tools and contain one of these names)
 local TARGET_ITEMS = {
@@ -283,7 +284,7 @@ local SafezoneBtn = CreateButton("🛡️ Safezone TP", 3)
 local TPBtn = CreateButton("🎯 TP Above Head", 4)
 local AutoKillBtn, AutoKillGrad = CreateButton("⚔️ Auto Kill: OFF", 5)
 local GodModeBtn, GodGrad = CreateButton("🛡️ God Mode: OFF", 6)
-local BringBtn, BringGrad = CreateButton("🧲 Bring Rakoof: OFF", 7)
+local BringBtn, BringGrad = CreateButton("🧲 Bring Rake: OFF", 7)
 local HitboxBtn, HitGrad = CreateButton("📦 Expand Hitbox: OFF", 8)
 local SpeedBtn, SpeedGrad = CreateButton("⚡ Speed Boost: OFF", 9)
 local FogBtn, FogGrad = CreateButton("💡 Fullbright: OFF", 10)
@@ -366,10 +367,23 @@ SafezoneBtn.MouseButton1Click:Connect(function()
 end)
 
 --------------------------------------------------------------------------------
--- AUTO PICKUP SPECIFIC ITEMS LOGIC
+-- AUTO PICKUP & YELLOW HIGHLIGHT (ESP) LOGIC
 --------------------------------------------------------------------------------
+local function isInsidePlayerInventory(item)
+    local ancestor = item.Parent
+    while ancestor and ancestor ~= Workspace do
+        -- Check if it's inside any player's character or backpack/inventory folder
+        if Players:GetPlayerFromCharacter(ancestor) or ancestor:IsA("Backpack") or ancestor.Name == "Backpack" then
+            return true
+        end
+        ancestor = ancestor.Parent
+    end
+    return false
+end
+
 local function isValidTargetItem(item)
     if not item:IsA("Tool") then return false end
+    if isInsidePlayerInventory(item) then return false end
     
     for _, targetName in ipairs(TARGET_ITEMS) do
         if string.find(item.Name, targetName) then
@@ -389,6 +403,29 @@ local function getPartFromItem(item)
     end
 end
 
+-- Manages yellow outlines for uncollected matching tools lying around the map
+local function updateItemHighlights()
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if isValidTargetItem(obj) then
+            if not obj:FindFirstChild("NoobHubHighlight") then
+                local hl = Instance.new("Highlight")
+                hl.Name = "NoobHubHighlight"
+                hl.Adornee = obj
+                hl.FillColor = Color3.fromRGB(255, 255, 0)
+                hl.FillTransparency = 0.5
+                hl.OutlineColor = Color3.fromRGB(255, 255, 0)
+                hl.OutlineTransparency = 0
+                hl.Parent = obj
+            end
+        else
+            local hl = obj:FindFirstChild("NoobHubHighlight")
+            if hl then
+                hl:Destroy()
+            end
+        end
+    end
+end
+
 PickupBtn.MouseButton1Click:Connect(function()
     AUTO_PICKUP_ITEMS_ENABLED = not AUTO_PICKUP_ITEMS_ENABLED
     PickupBtn.Text = AUTO_PICKUP_ITEMS_ENABLED and "🎁 Auto Pickup Items: ON" or "🎁 Auto Pickup Items: OFF"
@@ -404,16 +441,27 @@ PickupBtn.MouseButton1Click:Connect(function()
                 if isValidTargetItem(obj) then
                     local part = getPartFromItem(obj)
                     if part then
-                        -- Teleports the target item/tool directly to the player's root position to collect it
+                        -- Teleports the dropped tool directly to the player to pick it up
                         part.CFrame = hrp.CFrame
                     end
                 end
             end
         end)
+
+        espConnection = RunService.RenderStepped:Connect(updateItemHighlights)
     else
         if pickupLoop then 
             pickupLoop:Disconnect() 
             pickupLoop = nil 
+        end
+        if espConnection then
+            espConnection:Disconnect()
+            espConnection = nil
+        end
+        -- Clean up highlights when turned off
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            local hl = obj:FindFirstChild("NoobHubHighlight")
+            if hl then hl:Destroy() end
         end
     end
 end)
@@ -542,9 +590,9 @@ SpeedBtn.MouseButton1Click:Connect(function()
     SpeedBtn.Text = SPEED_BOOST_ENABLED and "⚡ Speed Boost: ON" or "⚡ Speed Boost: OFF"
     SpeedGrad.Color = SPEED_BOOST_ENABLED and ColorSequence.new(Color3.fromRGB(0, 180, 120), Color3.fromRGB(0, 100, 80)) or ColorSequence.new(ColorSequenceKeypoint.new(0, Color3.fromRGB(60, 30, 90)), ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 50, 100)))
     
-    local character = LocalPlayer.Character
-    if character and character:FindFirstChildOfClass("Humanoid") then
-        character:FindFirstChildOfClass("Humanoid").WalkSpeed = SPEED_BOOST_ENABLED and 32 or 16
+    ListCharacter = LocalPlayer.Character
+    if ListCharacter and ListCharacter:FindFirstChildOfClass("Humanoid") then
+        ListCharacter:FindFirstChildOfClass("Humanoid").WalkSpeed = SPEED_BOOST_ENABLED and 32 or 16
     end
 end)
 
