@@ -1,4 +1,4 @@
--- Noob Hub | Complete Unified Immune Head-Anchor & Weapon Support GUI
+-- Noob Hub | Sideways Layout & Mobile Supported (With Close, Minimize & Custom Side Toggle)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -22,7 +22,7 @@ local connectionLoop = nil
 local bringLoop = nil
 local godConnection = nil
 
--- Upgraded Weapon Priority List (GoldenClaws & UltraFish Added)
+-- Upgraded Weapon Priority List
 local WEAPON_PRIORITY = {
     "GoldenClaws",
     "UltraFish",
@@ -58,42 +58,38 @@ local function applyImmuneHeadAnchor(targetModel, targetRoot)
     local hrp = character:FindFirstChild("HumanoidRootPart")
     if not hrp or not targetRoot then return end
 
-    -- 1. Disable character collisions to bypass physical hitboxes completely
     for _, part in ipairs(character:GetChildren()) do
         if part:IsA("BasePart") then
             part.CanCollide = false
         end
     end
 
-    -- 2. Strip active touch triggers on target model
     for _, descendant in ipairs(targetModel:GetDescendants()) do
         if descendant:IsA("TouchTransmitter") or descendant.Name == "TouchInterest" then
             descendant:Destroy()
         end
     end
 
-    -- 3. Pure Global Vertical Vector Placement (Forces position straight above head)
     local headPart = targetModel:FindFirstChild("Head") or targetRoot
     local absoluteTopPosition = headPart.Position + Vector3.new(0, 5, 0)
-
-    -- Force CFrame directly above head looking down
     hrp.CFrame = CFrame.new(absoluteTopPosition, headPart.Position)
 end
 
 --------------------------------------------------------------------------------
--- 1. FANCY GRADIENT GUI SETUP
+-- SIDEWAYS UI SETUP (GRID / ROW CONFIGURATION)
 --------------------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "NoobHubImmuneHead"
+ScreenGui.Name = "NoobHubSidewaysMobile"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = PlayerGui
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 350, 0, 600)
-MainFrame.Position = UDim2.new(0.5, -175, 0.35, -300)
+MainFrame.Size = UDim2.new(0, 680, 0, 320)
+MainFrame.Position = UDim2.new(0.5, -340, 0.5, -160)
 MainFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
+MainFrame.Draggable = true 
 MainFrame.Parent = ScreenGui
 
 local MainGradient = Instance.new("UIGradient")
@@ -116,7 +112,7 @@ FrameStroke.Parent = MainFrame
 
 -- Header Bar
 local TitleBar = Instance.new("Frame")
-TitleBar.Size = UDim2.new(1, 0, 0, 50)
+TitleBar.Size = UDim2.new(1, 0, 0, 44)
 TitleBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 TitleBar.Active = true
 TitleBar.Parent = MainFrame
@@ -133,81 +129,114 @@ TitleCorner.CornerRadius = UDim.new(0, 16)
 TitleCorner.Parent = TitleBar
 
 local TitleText = Instance.new("TextLabel")
-TitleText.Size = UDim2.new(1, -120, 1, 0)
+TitleText.Size = UDim2.new(1, -220, 1, 0)
 TitleText.Position = UDim2.new(0, 14, 0, 0)
 TitleText.BackgroundTransparency = 1
-TitleText.Text = "🔰 Noob Hub [RightCtrl]"
+TitleText.Text = "🔰 Noob Hub (Sideways / Mobile)"
 TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleText.TextXAlignment = Enum.TextXAlignment.Left
 TitleText.Font = Enum.Font.GothamBold
-TitleText.TextSize = 16
+TitleText.TextSize = 15
 TitleText.Parent = TitleBar
 
-local SubLabel = Instance.new("TextLabel")
-SubLabel.Size = UDim2.new(0, 110, 0, 35)
-SubLabel.Position = UDim2.new(1, -115, 0, 7)
-SubLabel.BackgroundTransparency = 1
-SubLabel.Text = "( head-lock )"
-SubLabel.TextColor3 = Color3.fromRGB(180, 120, 255)
-SubLabel.Font = Enum.Font.Code
-SubLabel.TextSize = 12
-SubLabel.Parent = TitleBar
+-- Toggle UI Button (Side Button saying "NOOBHUB V2")
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Size = UDim2.new(0, 130, 0, 40)
+ToggleButton.Position = UDim2.new(0, 15, 0.4, 0)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(45, 20, 70)
+ToggleButton.Text = "NOOBHUB V2"
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.Font = Enum.Font.GothamBold
+ToggleButton.TextSize = 13
+ToggleButton.Active = true
+ToggleButton.Draggable = true
+ToggleButton.Parent = ScreenGui
 
--- Dragging Logic
-local dragging, dragInput, dragStart, startPos
+local ToggleGrad = Instance.new("UIGradient")
+ToggleGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(60, 30, 90)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 50, 100))
+})
+ToggleGrad.Parent = ToggleButton
 
-TitleBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = MainFrame.Position
-        
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
-    end
-end)
+Instance.new("UICorner", ToggleButton).CornerRadius = UDim.new(0, 10)
+local ToggleStroke = Instance.new("UIStroke", ToggleButton)
+ToggleStroke.Thickness = 2
+ToggleStroke.Color = Color3.fromRGB(160, 32, 240)
 
-TitleBar.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        dragInput = input
-    end
-end)
+-- Scrolling Grid Container for Sideways Layout
+local ScrollingContainer = Instance.new("ScrollingFrame")
+ScrollingContainer.Size = UDim2.new(1, -16, 1, -56)
+ScrollingContainer.Position = UDim2.new(0, 8, 0, 50)
+ScrollingContainer.BackgroundTransparency = 1
+ScrollingContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
+ScrollingContainer.AutomaticCanvasSize = Enum.AutomaticSize.Y
+ScrollingContainer.ScrollBarThickness = 6
+ScrollingContainer.Parent = MainFrame
 
-UserInputService.InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
-        local delta = input.Position - dragStart
-        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-end)
-
-local Container = Instance.new("Frame")
-Container.Size = UDim2.new(1, 0, 1, -55)
-Container.Position = UDim2.new(0, 0, 0, 55)
-Container.BackgroundTransparency = 1
-Container.Parent = MainFrame
-
-local UIListLayout = Instance.new("UIListLayout")
-UIListLayout.Padding = UDim.new(0, 6)
-UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-UIListLayout.Parent = Container
+local UIGridLayout = Instance.new("UIGridLayout")
+UIGridLayout.CellSize = UDim2.new(0, 215, 0, 42) 
+UIGridLayout.CellPadding = UDim2.new(0, 10, 0, 10)
+UIGridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+UIGridLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIGridLayout.Parent = ScrollingContainer
 
 --------------------------------------------------------------------------------
--- 2. BUTTON BUILDER
+-- WINDOW CONTROLS (X & - Buttons)
+--------------------------------------------------------------------------------
+-- Close Button (X)
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 32, 0, 32)
+CloseBtn.Position = UDim2.new(1, -38, 0, 6)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.TextSize = 14
+CloseBtn.Parent = TitleBar
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 8)
+
+CloseBtn.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+-- Minimize Button (-)
+local minimized = false
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Size = UDim2.new(0, 32, 0, 32)
+MinimizeBtn.Position = UDim2.new(1, -76, 0, 6)
+MinimizeBtn.BackgroundColor3 = Color3.fromRGB(180, 140, 40)
+MinimizeBtn.Text = "-"
+MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeBtn.Font = Enum.Font.GothamBold
+MinimizeBtn.TextSize = 16
+MinimizeBtn.Parent = TitleBar
+Instance.new("UICorner", MinimizeBtn).CornerRadius = UDim.new(0, 8)
+
+MinimizeBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    ScrollingContainer.Visible = not minimized
+    MainFrame.Size = minimized and UDim2.new(0, 680, 0, 44) or UDim2.new(0, 680, 0, 320)
+    MinimizeBtn.Text = minimized and "+" or "-"
+end)
+
+ToggleButton.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
+
+--------------------------------------------------------------------------------
+-- BUTTON BUILDER
 --------------------------------------------------------------------------------
 local function CreateButton(text, order)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0.92, 0, 0, 38)
+    btn.Size = UDim2.new(0, 215, 0, 42)
     btn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     btn.Text = text
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.Font = Enum.Font.GothamMedium
-    btn.TextSize = 13
+    btn.TextSize = 12
     btn.LayoutOrder = order
-    btn.Parent = Container
+    btn.Parent = ScrollingContainer
     
     local btnGradient = Instance.new("UIGradient")
     btnGradient.Color = ColorSequence.new({
@@ -236,29 +265,29 @@ local function CreateButton(text, order)
     return btn, btnGradient
 end
 
-local CaveABtn = CreateButton("⛰️ Teleport to Cave A", 1)
-local CaveBBtn = CreateButton("⛰️ Teleport to Cave B", 2)
-local SafezoneBtn = CreateButton("🛡️ Safezone Teleport", 3)
-local TPBtn = CreateButton("🎯 Teleport Above Head", 4)
-local AutoKillBtn, AutoKillGrad = CreateButton("⚔️ Auto Kill THE_RAKE: OFF", 5)
+local CaveABtn = CreateButton("⛰️ Teleport Cave A", 1)
+local CaveBBtn = CreateButton("⛰️ Teleport Cave B", 2)
+local SafezoneBtn = CreateButton("🛡️ Safezone TP", 3)
+local TPBtn = CreateButton("🎯 TP Above Head", 4)
+local AutoKillBtn, AutoKillGrad = CreateButton("⚔️ Auto Kill: OFF", 5)
 local GodModeBtn, GodGrad = CreateButton("🛡️ God Mode: OFF", 6)
-local BringBtn, BringGrad = CreateButton("🧲 Bring THE_RAKE: OFF", 7)
-local HitboxBtn, HitGrad = CreateButton("📦 Expand THE_RAKE Hitbox: OFF", 8)
+local BringBtn, BringGrad = CreateButton("🧲 Bring Rake: OFF", 7)
+local HitboxBtn, HitGrad = CreateButton("📦 Expand Hitbox: OFF", 8)
 local SpeedBtn, SpeedGrad = CreateButton("⚡ Speed Boost: OFF", 9)
-local FogBtn, FogGrad = CreateButton("💡 No Fog / Fullbright: OFF", 10)
+local FogBtn, FogGrad = CreateButton("💡 Fullbright: OFF", 10)
 
 --------------------------------------------------------------------------------
--- 3. KEYBIND TOGGLE
+-- KEYBIND TOGGLE
 --------------------------------------------------------------------------------
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.KeyCode == TOGGLE_KEY then
-        ScreenGui.Enabled = not ScreenGui.Enabled
+        MainFrame.Visible = not MainFrame.Visible
     end
 end)
 
 --------------------------------------------------------------------------------
--- 4. TELEPORTS
+-- TELEPORTS
 --------------------------------------------------------------------------------
 local function findLocationPart(targetName)
     local miscFolder = Workspace:FindFirstChild("Misc")
@@ -324,7 +353,7 @@ SafezoneBtn.MouseButton1Click:Connect(function()
 end)
 
 --------------------------------------------------------------------------------
--- 5. GOD MODE & AUTO KILL (WITH GOLDENCLAWS / ULTRAFISH SUPPORT)
+-- GOD MODE & AUTO KILL
 --------------------------------------------------------------------------------
 GodModeBtn.MouseButton1Click:Connect(function()
     GODMODE_ENABLED = not GODMODE_ENABLED
@@ -392,8 +421,8 @@ end)
 
 AutoKillBtn.MouseButton1Click:Connect(function()
     AUTO_KILL_ENABLED = not AUTO_KILL_ENABLED
-    AutoKillBtn.Text = AUTO_KILL_ENABLED and "⚔️ Auto Kill THE_RAKE: ON" or "⚔️ Auto Kill THE_RAKE: OFF"
-    AutoKillGrad.Color = AUTO_KILL_ENABLED and ColorSequence.new(Color3.fromRGB(0, 180, 120), Color3.fromRGB(0, 100, 80)) or ColorSequence.new(Color3.fromRGB(60, 30, 90), Color3.fromRGB(30, 50, 100))
+    AutoKillBtn.Text = AUTO_KILL_ENABLED and "⚔️ Auto Kill: ON" or "⚔️ Auto Kill: OFF"
+    AutoKillGrad.Color = AUTO_KILL_ENABLED and ColorSequence.new(Color3.fromRGB(0, 180, 120), Color3.fromRGB(0, 100, 80)) or ColorSequence.new(ColorSequenceKeypoint.new(0, Color3.fromRGB(60, 30, 90)), ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 50, 100)))
     
     if AUTO_KILL_ENABLED then
         connectionLoop = RunService.Heartbeat:Connect(function()
@@ -409,12 +438,12 @@ AutoKillBtn.MouseButton1Click:Connect(function()
 end)
 
 --------------------------------------------------------------------------------
--- 6. MISC UTILITIES
+-- MISC UTILITIES
 --------------------------------------------------------------------------------
 BringBtn.MouseButton1Click:Connect(function()
     BRING_BOSS_ENABLED = not BRING_BOSS_ENABLED
-    BringBtn.Text = BRING_BOSS_ENABLED and "🧲 Bring THE_RAKE: ON" or "🧲 Bring THE_RAKE: OFF"
-    BringGrad.Color = BRING_BOSS_ENABLED and ColorSequence.new(Color3.fromRGB(0, 180, 120), Color3.fromRGB(0, 100, 80)) or ColorSequence.new(Color3.fromRGB(60, 30, 90), Color3.fromRGB(30, 50, 100))
+    BringBtn.Text = BRING_BOSS_ENABLED and "🧲 Bring Rake: ON" or "🧲 Bring Rake: OFF"
+    BringGrad.Color = BRING_BOSS_ENABLED and ColorSequence.new(Color3.fromRGB(0, 180, 120), Color3.fromRGB(0, 100, 80)) or ColorSequence.new(ColorSequenceKeypoint.new(0, Color3.fromRGB(60, 30, 90)), ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 50, 100)))
     
     if BRING_BOSS_ENABLED then
         bringLoop = RunService.Heartbeat:Connect(function()
@@ -431,8 +460,8 @@ end)
 
 HitboxBtn.MouseButton1Click:Connect(function()
     EXPAND_HITBOX_ENABLED = not EXPAND_HITBOX_ENABLED
-    HitboxBtn.Text = EXPAND_HITBOX_ENABLED and "📦 Expand THE_RAKE Hitbox: ON" or "📦 Expand THE_RAKE Hitbox: OFF"
-    HitGrad.Color = EXPAND_HITBOX_ENABLED and ColorSequence.new(Color3.fromRGB(0, 180, 120), Color3.fromRGB(0, 100, 80)) or ColorSequence.new(Color3.fromRGB(60, 30, 90), Color3.fromRGB(30, 50, 100))
+    HitboxBtn.Text = EXPAND_HITBOX_ENABLED and "📦 Expand Hitbox: ON" or "📦 Expand Hitbox: OFF"
+    HitGrad.Color = EXPAND_HITBOX_ENABLED and ColorSequence.new(Color3.fromRGB(0, 180, 120), Color3.fromRGB(0, 100, 80)) or ColorSequence.new(ColorSequenceKeypoint.new(0, Color3.fromRGB(60, 30, 90)), ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 50, 100)))
     
     local _, bossRoot = findBossRoot()
     if EXPAND_HITBOX_ENABLED and bossRoot then
@@ -445,7 +474,7 @@ end)
 SpeedBtn.MouseButton1Click:Connect(function()
     SPEED_BOOST_ENABLED = not SPEED_BOOST_ENABLED
     SpeedBtn.Text = SPEED_BOOST_ENABLED and "⚡ Speed Boost: ON" or "⚡ Speed Boost: OFF"
-    SpeedGrad.Color = SPEED_BOOST_ENABLED and ColorSequence.new(Color3.fromRGB(0, 180, 120), Color3.fromRGB(0, 100, 80)) or ColorSequence.new(Color3.fromRGB(60, 30, 90), Color3.fromRGB(30, 50, 100))
+    SpeedGrad.Color = SPEED_BOOST_ENABLED and ColorSequence.new(Color3.fromRGB(0, 180, 120), Color3.fromRGB(0, 100, 80)) or ColorSequence.new(ColorSequenceKeypoint.new(0, Color3.fromRGB(60, 30, 90)), ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 50, 100)))
     
     local character = LocalPlayer.Character
     if character and character:FindFirstChildOfClass("Humanoid") then
@@ -457,8 +486,8 @@ local defaultFog = Lighting.FogEnd
 local noFogActive = false
 FogBtn.MouseButton1Click:Connect(function()
     noFogActive = not noFogActive
-    FogBtn.Text = noFogActive and "💡 No Fog / Fullbright: ON" or "💡 No Fog / Fullbright: OFF"
-    FogGrad.Color = noFogActive and ColorSequence.new(Color3.fromRGB(0, 180, 120), Color3.fromRGB(0, 100, 80)) or ColorSequence.new(Color3.fromRGB(60, 30, 90), Color3.fromRGB(30, 50, 100))
+    FogBtn.Text = noFogActive and "💡 Fullbright: ON" or "💡 Fullbright: OFF"
+    FogGrad.Color = noFogActive and ColorSequence.new(Color3.fromRGB(0, 180, 120), Color3.fromRGB(0, 100, 80)) or ColorSequence.new(ColorSequenceKeypoint.new(0, Color3.fromRGB(60, 30, 90)), ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 50, 100)))
     
     Lighting.FogEnd = noFogActive and 9e9 or defaultFog
     Lighting.Brightness = noFogActive and 2 or 1
