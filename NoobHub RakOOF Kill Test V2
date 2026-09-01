@@ -1,4 +1,4 @@
--- Noob Hub | Imperial Edition (Yellow Outline / Highlight Auto-Pickup Included)
+-- Noob Hub | Imperial Edition (Updated Weapon Priority & Yellow Outline Pickup)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -26,7 +26,7 @@ local bringLoop = nil
 local godConnection = nil
 local pickupLoop = nil
 
--- Target Item Names (Fallback list if item names are standard)
+-- Target Item Names
 local TARGET_ITEMS = {
     "GoldenApple",
     "LegendaryEnergy",
@@ -37,7 +37,7 @@ local TARGET_ITEMS = {
     "BurnedBone"
 }
 
--- Upgraded Weapon Priority List
+-- Updated Weapon Priority List (GoldenClaws placed higher than StunStick)
 local WEAPON_PRIORITY = {
     "GoldenClaws",
     "UltraFish",
@@ -120,14 +120,12 @@ local FrameCorner = Instance.new("UICorner")
 FrameCorner.CornerRadius = UDim.new(0, 16)
 FrameCorner.Parent = MainFrame
 
--- Gold Royal Outer Border
 local FrameStroke = Instance.new("UIStroke")
 FrameStroke.Thickness = 2.5
 FrameStroke.Color = Color3.fromRGB(230, 180, 50)
 FrameStroke.Transparency = 0.1
 FrameStroke.Parent = MainFrame
 
--- Header Bar
 local TitleBar = Instance.new("Frame")
 TitleBar.Size = UDim2.new(1, 0, 0, 48)
 TitleBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -156,7 +154,6 @@ TitleText.Font = Enum.Font.GothamBold
 TitleText.TextSize = 16
 TitleText.Parent = TitleBar
 
--- Toggle Button
 local ToggleButton = Instance.new("TextButton")
 ToggleButton.Size = UDim2.new(0, 140, 0, 42)
 ToggleButton.Position = UDim2.new(0, 15, 0.4, 0)
@@ -174,7 +171,6 @@ local ToggleStroke = Instance.new("UIStroke", ToggleButton)
 ToggleStroke.Thickness = 2
 ToggleStroke.Color = Color3.fromRGB(230, 180, 50)
 
--- Grid Scrolling Container
 local ScrollingContainer = Instance.new("ScrollingFrame")
 ScrollingContainer.Size = UDim2.new(1, -20, 1, -62)
 ScrollingContainer.Position = UDim2.new(0, 10, 0, 54)
@@ -377,14 +373,11 @@ local function isInsidePlayerInventory(item)
     return false
 end
 
--- Checks if a Color3 is considered Yellow
 local function isYellowColor(color)
     if not color then return false end
-    -- Check high Red and Green with low Blue ratio
     return (color.R > 0.6 and color.G > 0.6 and color.B < 0.4)
 end
 
--- Detects if an item model/part has a yellow highlight, outline, or selection box
 local function hasYellowOutline(obj)
     for _, child in ipairs(obj:GetDescendants()) do
         if child:IsA("Highlight") then
@@ -414,7 +407,6 @@ local function getPartFromItem(item)
     end
 end
 
--- Fetches all items with yellow outlines or standard item targets
 local function getPickableItems()
     local items = {}
     local dropsFolder = Workspace:FindFirstChild("Drops") or Workspace:FindFirstChild("drops")
@@ -422,11 +414,9 @@ local function getPickableItems()
     
     for _, obj in ipairs(searchContainer) do
         if not isInsidePlayerInventory(obj) then
-            -- Check for yellow highlight/outline first
             if hasYellowOutline(obj) then
                 table.insert(items, obj)
             else
-                -- Fallback name check
                 for _, targetName in ipairs(TARGET_ITEMS) do
                     if string.find(obj.Name, targetName) then
                         table.insert(items, obj)
