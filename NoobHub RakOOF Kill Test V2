@@ -1,4 +1,4 @@
--- Noob Hub | Sideways Layout & Mobile Supported (With Close, Minimize & Custom Side Toggle)
+-- Noob Hub | Sideways Layout, Mobile Supported & Custom Item Auto-Pickup/Teleport
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -16,11 +16,24 @@ local GODMODE_ENABLED = false
 local BRING_BOSS_ENABLED = false
 local EXPAND_HITBOX_ENABLED = false
 local SPEED_BOOST_ENABLED = false
+local AUTO_PICKUP_ITEMS_ENABLED = false
 local TOGGLE_KEY = Enum.KeyCode.RightControl 
 
 local connectionLoop = nil
 local bringLoop = nil
 local godConnection = nil
+local pickupLoop = nil
+
+-- Target Item Names for Auto-Pickup (Must be tools and contain one of these names)
+local TARGET_ITEMS = {
+    "GoldenApple",
+    "LegendaryEnergy",
+    "IgnitionFlame",
+    "SnowFlakes",
+    "CorruptedHalo",
+    "StrangeBar",
+    "BurnedBone"
+}
 
 -- Upgraded Weapon Priority List
 local WEAPON_PRIORITY = {
@@ -184,7 +197,6 @@ UIGridLayout.Parent = ScrollingContainer
 --------------------------------------------------------------------------------
 -- WINDOW CONTROLS (X & - Buttons)
 --------------------------------------------------------------------------------
--- Close Button (X)
 local CloseBtn = Instance.new("TextButton")
 CloseBtn.Size = UDim2.new(0, 32, 0, 32)
 CloseBtn.Position = UDim2.new(1, -38, 0, 6)
@@ -197,10 +209,10 @@ CloseBtn.Parent = TitleBar
 Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 8)
 
 CloseBtn.MouseButton1Click:Connect(function()
-    ScreenGui:Destroy()
+    MainFrame.Visible = false
+    ToggleButton.Visible = true
 end)
 
--- Minimize Button (-)
 local minimized = false
 local MinimizeBtn = Instance.new("TextButton")
 MinimizeBtn.Size = UDim2.new(0, 32, 0, 32)
@@ -271,10 +283,11 @@ local SafezoneBtn = CreateButton("🛡️ Safezone TP", 3)
 local TPBtn = CreateButton("🎯 TP Above Head", 4)
 local AutoKillBtn, AutoKillGrad = CreateButton("⚔️ Auto Kill: OFF", 5)
 local GodModeBtn, GodGrad = CreateButton("🛡️ God Mode: OFF", 6)
-local BringBtn, BringGrad = CreateButton("🧲 Bring Rake: OFF", 7)
+local BringBtn, BringGrad = CreateButton("🧲 Bring Rakoof: OFF", 7)
 local HitboxBtn, HitGrad = CreateButton("📦 Expand Hitbox: OFF", 8)
 local SpeedBtn, SpeedGrad = CreateButton("⚡ Speed Boost: OFF", 9)
 local FogBtn, FogGrad = CreateButton("💡 Fullbright: OFF", 10)
+local PickupBtn, PickupGrad = CreateButton("🎁 Auto Pickup Items: OFF", 11)
 
 --------------------------------------------------------------------------------
 -- KEYBIND TOGGLE
@@ -348,6 +361,59 @@ SafezoneBtn.MouseButton1Click:Connect(function()
         if obj:IsA("SpawnLocation") then
             character.HumanoidRootPart.CFrame = obj.CFrame + Vector3.new(0, 3.5, 0)
             break
+        end
+    end
+end)
+
+--------------------------------------------------------------------------------
+-- AUTO PICKUP SPECIFIC ITEMS LOGIC
+--------------------------------------------------------------------------------
+local function isValidTargetItem(item)
+    if not item:IsA("Tool") then return false end
+    
+    for _, targetName in ipairs(TARGET_ITEMS) do
+        if string.find(item.Name, targetName) then
+            return true
+        end
+    end
+    return false
+end
+
+local function getPartFromItem(item)
+    if item:IsA("BasePart") then
+        return item
+    elseif item:IsA("Model") then
+        return item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
+    else
+        return item:FindFirstChildWhichIsA("BasePart")
+    end
+end
+
+PickupBtn.MouseButton1Click:Connect(function()
+    AUTO_PICKUP_ITEMS_ENABLED = not AUTO_PICKUP_ITEMS_ENABLED
+    PickupBtn.Text = AUTO_PICKUP_ITEMS_ENABLED and "🎁 Auto Pickup Items: ON" or "🎁 Auto Pickup Items: OFF"
+    PickupGrad.Color = AUTO_PICKUP_ITEMS_ENABLED and ColorSequence.new(Color3.fromRGB(0, 180, 120), Color3.fromRGB(0, 100, 80)) or ColorSequence.new(Color3.fromRGB(60, 30, 90), Color3.fromRGB(30, 50, 100))
+    
+    if AUTO_PICKUP_ITEMS_ENABLED then
+        pickupLoop = RunService.Heartbeat:Connect(function()
+            local character = LocalPlayer.Character
+            if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+            local hrp = character.HumanoidRootPart
+
+            for _, obj in ipairs(Workspace:GetDescendants()) do
+                if isValidTargetItem(obj) then
+                    local part = getPartFromItem(obj)
+                    if part then
+                        -- Teleports the target item/tool directly to the player's root position to collect it
+                        part.CFrame = hrp.CFrame
+                    end
+                end
+            end
+        end)
+    else
+        if pickupLoop then 
+            pickupLoop:Disconnect() 
+            pickupLoop = nil 
         end
     end
 end)
