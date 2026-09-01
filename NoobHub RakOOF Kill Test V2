@@ -1,4 +1,4 @@
--- Noob Hub | Sideways Layout, Mobile Supported & Custom Item Auto-Pickup (With ESP Highlights)
+-- Noob Hub | Imperial Edition (Yellow Outline / Highlight Auto-Pickup Included)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -10,7 +10,9 @@ local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
 -- Configuration Variables
-local TARGET_NAME = "THE_RAKE"
+local TARGET_NAME = "THE_RAKE" -- Internal Target Model Name
+local DISPLAY_TARGET_NAME = "Rakoof" -- Visual Display Name
+
 local AUTO_KILL_ENABLED = false
 local GODMODE_ENABLED = false
 local BRING_BOSS_ENABLED = false
@@ -23,9 +25,8 @@ local connectionLoop = nil
 local bringLoop = nil
 local godConnection = nil
 local pickupLoop = nil
-local espConnection = nil
 
--- Target Item Names for Auto-Pickup (Must be tools and contain one of these names)
+-- Target Item Names (Fallback list if item names are standard)
 local TARGET_ITEMS = {
     "GoldenApple",
     "LegendaryEnergy",
@@ -90,17 +91,17 @@ local function applyImmuneHeadAnchor(targetModel, targetRoot)
 end
 
 --------------------------------------------------------------------------------
--- SIDEWAYS UI SETUP (GRID / ROW CONFIGURATION)
+-- IMPERIAL / ROYAL GUI CREATION
 --------------------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "NoobHubSidewaysMobile"
+ScreenGui.Name = "NoobHubImperial"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = PlayerGui
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 680, 0, 320)
-MainFrame.Position = UDim2.new(0.5, -340, 0.5, -160)
-MainFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+MainFrame.Size = UDim2.new(0, 700, 0, 340)
+MainFrame.Position = UDim2.new(0.5, -350, 0.5, -170)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 12, 25)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true 
@@ -108,8 +109,9 @@ MainFrame.Parent = ScreenGui
 
 local MainGradient = Instance.new("UIGradient")
 MainGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 15, 40)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 30, 55))
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 18, 38)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(12, 10, 20)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(35, 25, 10))
 })
 MainGradient.Rotation = 45
 MainGradient.Parent = MainFrame
@@ -118,23 +120,24 @@ local FrameCorner = Instance.new("UICorner")
 FrameCorner.CornerRadius = UDim.new(0, 16)
 FrameCorner.Parent = MainFrame
 
+-- Gold Royal Outer Border
 local FrameStroke = Instance.new("UIStroke")
-FrameStroke.Thickness = 2
-FrameStroke.Color = Color3.fromRGB(160, 32, 240)
-FrameStroke.Transparency = 0.2
+FrameStroke.Thickness = 2.5
+FrameStroke.Color = Color3.fromRGB(230, 180, 50)
+FrameStroke.Transparency = 0.1
 FrameStroke.Parent = MainFrame
 
 -- Header Bar
 local TitleBar = Instance.new("Frame")
-TitleBar.Size = UDim2.new(1, 0, 0, 44)
+TitleBar.Size = UDim2.new(1, 0, 0, 48)
 TitleBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 TitleBar.Active = true
 TitleBar.Parent = MainFrame
 
 local TitleGradient = Instance.new("UIGradient")
 TitleGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(45, 20, 70)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 40, 80))
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(45, 15, 65)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(60, 40, 15))
 })
 TitleGradient.Parent = TitleBar
 
@@ -144,65 +147,59 @@ TitleCorner.Parent = TitleBar
 
 local TitleText = Instance.new("TextLabel")
 TitleText.Size = UDim2.new(1, -220, 1, 0)
-TitleText.Position = UDim2.new(0, 14, 0, 0)
+TitleText.Position = UDim2.new(0, 16, 0, 0)
 TitleText.BackgroundTransparency = 1
-TitleText.Text = "🔰 Noob Hub (Sideways / Mobile)"
-TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleText.Text = "👑 NOOB HUB V2 — Imperial Edition"
+TitleText.TextColor3 = Color3.fromRGB(255, 220, 100)
 TitleText.TextXAlignment = Enum.TextXAlignment.Left
 TitleText.Font = Enum.Font.GothamBold
-TitleText.TextSize = 15
+TitleText.TextSize = 16
 TitleText.Parent = TitleBar
 
--- Toggle UI Button (Side Button saying "NOOBHUB V2")
+-- Toggle Button
 local ToggleButton = Instance.new("TextButton")
-ToggleButton.Size = UDim2.new(0, 130, 0, 40)
+ToggleButton.Size = UDim2.new(0, 140, 0, 42)
 ToggleButton.Position = UDim2.new(0, 15, 0.4, 0)
-ToggleButton.BackgroundColor3 = Color3.fromRGB(45, 20, 70)
-ToggleButton.Text = "NOOBHUB V2"
-ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(25, 18, 38)
+ToggleButton.Text = "👑 NOOB HUB V2"
+ToggleButton.TextColor3 = Color3.fromRGB(255, 215, 0)
 ToggleButton.Font = Enum.Font.GothamBold
 ToggleButton.TextSize = 13
 ToggleButton.Active = true
 ToggleButton.Draggable = true
 ToggleButton.Parent = ScreenGui
 
-local ToggleGrad = Instance.new("UIGradient")
-ToggleGrad.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(60, 30, 90)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 50, 100))
-})
-ToggleGrad.Parent = ToggleButton
-
 Instance.new("UICorner", ToggleButton).CornerRadius = UDim.new(0, 10)
 local ToggleStroke = Instance.new("UIStroke", ToggleButton)
 ToggleStroke.Thickness = 2
-ToggleStroke.Color = Color3.fromRGB(160, 32, 240)
+ToggleStroke.Color = Color3.fromRGB(230, 180, 50)
 
--- Scrolling Grid Container for Sideways Layout
+-- Grid Scrolling Container
 local ScrollingContainer = Instance.new("ScrollingFrame")
-ScrollingContainer.Size = UDim2.new(1, -16, 1, -56)
-ScrollingContainer.Position = UDim2.new(0, 8, 0, 50)
+ScrollingContainer.Size = UDim2.new(1, -20, 1, -62)
+ScrollingContainer.Position = UDim2.new(0, 10, 0, 54)
 ScrollingContainer.BackgroundTransparency = 1
 ScrollingContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
 ScrollingContainer.AutomaticCanvasSize = Enum.AutomaticSize.Y
-ScrollingContainer.ScrollBarThickness = 6
+ScrollingContainer.ScrollBarThickness = 5
+ScrollingContainer.ScrollBarImageColor3 = Color3.fromRGB(230, 180, 50)
 ScrollingContainer.Parent = MainFrame
 
 local UIGridLayout = Instance.new("UIGridLayout")
-UIGridLayout.CellSize = UDim2.new(0, 215, 0, 42) 
+UIGridLayout.CellSize = UDim2.new(0, 218, 0, 44) 
 UIGridLayout.CellPadding = UDim2.new(0, 10, 0, 10)
 UIGridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 UIGridLayout.SortOrder = Enum.SortOrder.LayoutOrder
 UIGridLayout.Parent = ScrollingContainer
 
 --------------------------------------------------------------------------------
--- WINDOW CONTROLS (X & - Buttons)
+-- WINDOW CONTROLS
 --------------------------------------------------------------------------------
 local CloseBtn = Instance.new("TextButton")
 CloseBtn.Size = UDim2.new(0, 32, 0, 32)
-CloseBtn.Position = UDim2.new(1, -38, 0, 6)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-CloseBtn.Text = "X"
+CloseBtn.Position = UDim2.new(1, -40, 0, 8)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 50)
+CloseBtn.Text = "✕"
 CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 CloseBtn.Font = Enum.Font.GothamBold
 CloseBtn.TextSize = 14
@@ -217,20 +214,20 @@ end)
 local minimized = false
 local MinimizeBtn = Instance.new("TextButton")
 MinimizeBtn.Size = UDim2.new(0, 32, 0, 32)
-MinimizeBtn.Position = UDim2.new(1, -76, 0, 6)
-MinimizeBtn.BackgroundColor3 = Color3.fromRGB(180, 140, 40)
-MinimizeBtn.Text = "-"
+MinimizeBtn.Position = UDim2.new(1, -78, 0, 8)
+MinimizeBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 40)
+MinimizeBtn.Text = "—"
 MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 MinimizeBtn.Font = Enum.Font.GothamBold
-MinimizeBtn.TextSize = 16
+MinimizeBtn.TextSize = 14
 MinimizeBtn.Parent = TitleBar
 Instance.new("UICorner", MinimizeBtn).CornerRadius = UDim.new(0, 8)
 
 MinimizeBtn.MouseButton1Click:Connect(function()
     minimized = not minimized
     ScrollingContainer.Visible = not minimized
-    MainFrame.Size = minimized and UDim2.new(0, 680, 0, 44) or UDim2.new(0, 680, 0, 320)
-    MinimizeBtn.Text = minimized and "+" or "-"
+    MainFrame.Size = minimized and UDim2.new(0, 700, 0, 48) or UDim2.new(0, 700, 0, 340)
+    MinimizeBtn.Text = minimized and "+" or "—"
 end)
 
 ToggleButton.MouseButton1Click:Connect(function()
@@ -242,19 +239,19 @@ end)
 --------------------------------------------------------------------------------
 local function CreateButton(text, order)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, 215, 0, 42)
+    btn.Size = UDim2.new(0, 218, 0, 44)
     btn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     btn.Text = text
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Font = Enum.Font.GothamMedium
+    btn.TextColor3 = Color3.fromRGB(240, 240, 240)
+    btn.Font = Enum.Font.GothamSemibold
     btn.TextSize = 12
     btn.LayoutOrder = order
     btn.Parent = ScrollingContainer
     
     local btnGradient = Instance.new("UIGradient")
     btnGradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(60, 30, 90)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 50, 100))
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(45, 25, 60)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(25, 18, 40))
     })
     btnGradient.Parent = btn
 
@@ -263,32 +260,32 @@ local function CreateButton(text, order)
     corner.Parent = btn
     
     local stroke = Instance.new("UIStroke")
-    stroke.Thickness = 1
-    stroke.Color = Color3.fromRGB(180, 100, 255)
-    stroke.Transparency = 0.5
+    stroke.Thickness = 1.2
+    stroke.Color = Color3.fromRGB(200, 160, 60)
+    stroke.Transparency = 0.4
     stroke.Parent = btn
 
     btn.MouseEnter:Connect(function()
-        TweenService:Create(btnGradient, TweenInfo.new(0.2), {Rotation = 90}):Play()
+        TweenService:Create(stroke, TweenInfo.new(0.2), {Transparency = 0, Color = Color3.fromRGB(255, 215, 0)}):Play()
     end)
     btn.MouseLeave:Connect(function()
-        TweenService:Create(btnGradient, TweenInfo.new(0.2), {Rotation = 0}):Play()
+        TweenService:Create(stroke, TweenInfo.new(0.2), {Transparency = 0.4, Color = Color3.fromRGB(200, 160, 60)}):Play()
     end)
     
-    return btn, btnGradient
+    return btn, btnGradient, stroke
 end
 
 local CaveABtn = CreateButton("⛰️ Teleport Cave A", 1)
 local CaveBBtn = CreateButton("⛰️ Teleport Cave B", 2)
 local SafezoneBtn = CreateButton("🛡️ Safezone TP", 3)
 local TPBtn = CreateButton("🎯 TP Above Head", 4)
-local AutoKillBtn, AutoKillGrad = CreateButton("⚔️ Auto Kill: OFF", 5)
-local GodModeBtn, GodGrad = CreateButton("🛡️ God Mode: OFF", 6)
-local BringBtn, BringGrad = CreateButton("🧲 Bring Rake: OFF", 7)
-local HitboxBtn, HitGrad = CreateButton("📦 Expand Hitbox: OFF", 8)
-local SpeedBtn, SpeedGrad = CreateButton("⚡ Speed Boost: OFF", 9)
-local FogBtn, FogGrad = CreateButton("💡 Fullbright: OFF", 10)
-local PickupBtn, PickupGrad = CreateButton("🎁 Auto Pickup Items: OFF", 11)
+local AutoKillBtn, AutoKillGrad, AutoKillStroke = CreateButton("⚔️ Auto Kill: OFF", 5)
+local GodModeBtn, GodGrad, GodStroke = CreateButton("🛡️ God Mode: OFF", 6)
+local BringBtn, BringGrad, BringStroke = CreateButton("🧲 Bring " .. DISPLAY_TARGET_NAME .. ": OFF", 7)
+local HitboxBtn, HitGrad, HitStroke = CreateButton("📦 Expand Hitbox: OFF", 8)
+local SpeedBtn, SpeedGrad, SpeedStroke = CreateButton("⚡ Speed Boost: OFF", 9)
+local FogBtn, FogGrad, FogStroke = CreateButton("💡 Fullbright: OFF", 10)
+local PickupBtn, PickupGrad, PickupStroke = CreateButton("🎁 Auto Pickup Items: OFF", 11)
 
 --------------------------------------------------------------------------------
 -- KEYBIND TOGGLE
@@ -367,12 +364,11 @@ SafezoneBtn.MouseButton1Click:Connect(function()
 end)
 
 --------------------------------------------------------------------------------
--- AUTO PICKUP & YELLOW HIGHLIGHT (ESP) LOGIC
+-- ADVANCED YELLOW OUTLINE & DROPS AUTO PICKUP LOGIC
 --------------------------------------------------------------------------------
 local function isInsidePlayerInventory(item)
     local ancestor = item.Parent
     while ancestor and ancestor ~= Workspace do
-        -- Check if it's inside any player's character or backpack/inventory folder
         if Players:GetPlayerFromCharacter(ancestor) or ancestor:IsA("Backpack") or ancestor.Name == "Backpack" then
             return true
         end
@@ -381,13 +377,28 @@ local function isInsidePlayerInventory(item)
     return false
 end
 
-local function isValidTargetItem(item)
-    if not item:IsA("Tool") then return false end
-    if isInsidePlayerInventory(item) then return false end
-    
-    for _, targetName in ipairs(TARGET_ITEMS) do
-        if string.find(item.Name, targetName) then
-            return true
+-- Checks if a Color3 is considered Yellow
+local function isYellowColor(color)
+    if not color then return false end
+    -- Check high Red and Green with low Blue ratio
+    return (color.R > 0.6 and color.G > 0.6 and color.B < 0.4)
+end
+
+-- Detects if an item model/part has a yellow highlight, outline, or selection box
+local function hasYellowOutline(obj)
+    for _, child in ipairs(obj:GetDescendants()) do
+        if child:IsA("Highlight") then
+            if isYellowColor(child.OutlineColor) or isYellowColor(child.FillColor) then
+                return true
+            end
+        elseif child:IsA("SelectionBox") then
+            if isYellowColor(child.Color3) then
+                return true
+            end
+        elseif child:IsA("UIStroke") then
+            if isYellowColor(child.Color) then
+                return true
+            end
         end
     end
     return false
@@ -403,66 +414,53 @@ local function getPartFromItem(item)
     end
 end
 
--- Manages yellow outlines for uncollected matching tools lying around the map
-local function updateItemHighlights()
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        if isValidTargetItem(obj) then
-            if not obj:FindFirstChild("NoobHubHighlight") then
-                local hl = Instance.new("Highlight")
-                hl.Name = "NoobHubHighlight"
-                hl.Adornee = obj
-                hl.FillColor = Color3.fromRGB(255, 255, 0)
-                hl.FillTransparency = 0.5
-                hl.OutlineColor = Color3.fromRGB(255, 255, 0)
-                hl.OutlineTransparency = 0
-                hl.Parent = obj
-            end
-        else
-            local hl = obj:FindFirstChild("NoobHubHighlight")
-            if hl then
-                hl:Destroy()
+-- Fetches all items with yellow outlines or standard item targets
+local function getPickableItems()
+    local items = {}
+    local dropsFolder = Workspace:FindFirstChild("Drops") or Workspace:FindFirstChild("drops")
+    local searchContainer = dropsFolder and dropsFolder:GetDescendants() or Workspace:GetDescendants()
+    
+    for _, obj in ipairs(searchContainer) do
+        if not isInsidePlayerInventory(obj) then
+            -- Check for yellow highlight/outline first
+            if hasYellowOutline(obj) then
+                table.insert(items, obj)
+            else
+                -- Fallback name check
+                for _, targetName in ipairs(TARGET_ITEMS) do
+                    if string.find(obj.Name, targetName) then
+                        table.insert(items, obj)
+                        break
+                    end
+                end
             end
         end
     end
+    return items
 end
 
 PickupBtn.MouseButton1Click:Connect(function()
     AUTO_PICKUP_ITEMS_ENABLED = not AUTO_PICKUP_ITEMS_ENABLED
     PickupBtn.Text = AUTO_PICKUP_ITEMS_ENABLED and "🎁 Auto Pickup Items: ON" or "🎁 Auto Pickup Items: OFF"
-    PickupGrad.Color = AUTO_PICKUP_ITEMS_ENABLED and ColorSequence.new(Color3.fromRGB(0, 180, 120), Color3.fromRGB(0, 100, 80)) or ColorSequence.new(Color3.fromRGB(60, 30, 90), Color3.fromRGB(30, 50, 100))
-    
+    PickupGrad.Color = AUTO_PICKUP_ITEMS_ENABLED and ColorSequence.new(Color3.fromRGB(20, 120, 70), Color3.fromRGB(10, 70, 40)) or ColorSequence.new(Color3.fromRGB(45, 25, 60), Color3.fromRGB(25, 18, 40))
+    PickupStroke.Color = AUTO_PICKUP_ITEMS_ENABLED and Color3.fromRGB(50, 255, 150) or Color3.fromRGB(200, 160, 60)
+
     if AUTO_PICKUP_ITEMS_ENABLED then
         pickupLoop = RunService.Heartbeat:Connect(function()
             local character = LocalPlayer.Character
             if not character or not character:FindFirstChild("HumanoidRootPart") then return end
             local hrp = character.HumanoidRootPart
 
-            for _, obj in ipairs(Workspace:GetDescendants()) do
-                if isValidTargetItem(obj) then
-                    local part = getPartFromItem(obj)
-                    if part then
-                        -- Teleports the dropped tool directly to the player to pick it up
-                        part.CFrame = hrp.CFrame
-                    end
+            local pickableItems = getPickableItems()
+            for _, item in ipairs(pickableItems) do
+                local part = getPartFromItem(item)
+                if part then
+                    part.CFrame = hrp.CFrame
                 end
             end
         end)
-
-        espConnection = RunService.RenderStepped:Connect(updateItemHighlights)
     else
-        if pickupLoop then 
-            pickupLoop:Disconnect() 
-            pickupLoop = nil 
-        end
-        if espConnection then
-            espConnection:Disconnect()
-            espConnection = nil
-        end
-        -- Clean up highlights when turned off
-        for _, obj in ipairs(Workspace:GetDescendants()) do
-            local hl = obj:FindFirstChild("NoobHubHighlight")
-            if hl then hl:Destroy() end
-        end
+        if pickupLoop then pickupLoop:Disconnect() pickupLoop = nil end
     end
 end)
 
@@ -472,7 +470,8 @@ end)
 GodModeBtn.MouseButton1Click:Connect(function()
     GODMODE_ENABLED = not GODMODE_ENABLED
     GodModeBtn.Text = GODMODE_ENABLED and "🛡️ God Mode: ON" or "🛡️ God Mode: OFF"
-    GodGrad.Color = GODMODE_ENABLED and ColorSequence.new(Color3.fromRGB(0, 180, 120), Color3.fromRGB(0, 100, 80)) or ColorSequence.new(Color3.fromRGB(60, 30, 90), Color3.fromRGB(30, 50, 100))
+    GodGrad.Color = GODMODE_ENABLED and ColorSequence.new(Color3.fromRGB(20, 120, 70), Color3.fromRGB(10, 70, 40)) or ColorSequence.new(Color3.fromRGB(45, 25, 60), Color3.fromRGB(25, 18, 40))
+    GodStroke.Color = GODMODE_ENABLED and Color3.fromRGB(50, 255, 150) or Color3.fromRGB(200, 160, 60)
 
     if GODMODE_ENABLED then
         godConnection = RunService.Heartbeat:Connect(function()
@@ -536,8 +535,9 @@ end)
 AutoKillBtn.MouseButton1Click:Connect(function()
     AUTO_KILL_ENABLED = not AUTO_KILL_ENABLED
     AutoKillBtn.Text = AUTO_KILL_ENABLED and "⚔️ Auto Kill: ON" or "⚔️ Auto Kill: OFF"
-    AutoKillGrad.Color = AUTO_KILL_ENABLED and ColorSequence.new(Color3.fromRGB(0, 180, 120), Color3.fromRGB(0, 100, 80)) or ColorSequence.new(ColorSequenceKeypoint.new(0, Color3.fromRGB(60, 30, 90)), ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 50, 100)))
-    
+    AutoKillGrad.Color = AUTO_KILL_ENABLED and ColorSequence.new(Color3.fromRGB(20, 120, 70), Color3.fromRGB(10, 70, 40)) or ColorSequence.new(Color3.fromRGB(45, 25, 60), Color3.fromRGB(25, 18, 40))
+    AutoKillStroke.Color = AUTO_KILL_ENABLED and Color3.fromRGB(50, 255, 150) or Color3.fromRGB(200, 160, 60)
+
     if AUTO_KILL_ENABLED then
         connectionLoop = RunService.Heartbeat:Connect(function()
             local bossModel, bossRoot = findBossRoot()
@@ -556,9 +556,10 @@ end)
 --------------------------------------------------------------------------------
 BringBtn.MouseButton1Click:Connect(function()
     BRING_BOSS_ENABLED = not BRING_BOSS_ENABLED
-    BringBtn.Text = BRING_BOSS_ENABLED and "🧲 Bring Rake: ON" or "🧲 Bring Rake: OFF"
-    BringGrad.Color = BRING_BOSS_ENABLED and ColorSequence.new(Color3.fromRGB(0, 180, 120), Color3.fromRGB(0, 100, 80)) or ColorSequence.new(ColorSequenceKeypoint.new(0, Color3.fromRGB(60, 30, 90)), ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 50, 100)))
-    
+    BringBtn.Text = BRING_BOSS_ENABLED and ("🧲 Bring " .. DISPLAY_TARGET_NAME .. ": ON") or ("🧲 Bring " .. DISPLAY_TARGET_NAME .. ": OFF")
+    BringGrad.Color = BRING_BOSS_ENABLED and ColorSequence.new(Color3.fromRGB(20, 120, 70), Color3.fromRGB(10, 70, 40)) or ColorSequence.new(Color3.fromRGB(45, 25, 60), Color3.fromRGB(25, 18, 40))
+    BringStroke.Color = BRING_BOSS_ENABLED and Color3.fromRGB(50, 255, 150) or Color3.fromRGB(200, 160, 60)
+
     if BRING_BOSS_ENABLED then
         bringLoop = RunService.Heartbeat:Connect(function()
             local _, bossRoot = findBossRoot()
@@ -575,8 +576,9 @@ end)
 HitboxBtn.MouseButton1Click:Connect(function()
     EXPAND_HITBOX_ENABLED = not EXPAND_HITBOX_ENABLED
     HitboxBtn.Text = EXPAND_HITBOX_ENABLED and "📦 Expand Hitbox: ON" or "📦 Expand Hitbox: OFF"
-    HitGrad.Color = EXPAND_HITBOX_ENABLED and ColorSequence.new(Color3.fromRGB(0, 180, 120), Color3.fromRGB(0, 100, 80)) or ColorSequence.new(ColorSequenceKeypoint.new(0, Color3.fromRGB(60, 30, 90)), ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 50, 100)))
-    
+    HitGrad.Color = EXPAND_HITBOX_ENABLED and ColorSequence.new(Color3.fromRGB(20, 120, 70), Color3.fromRGB(10, 70, 40)) or ColorSequence.new(Color3.fromRGB(45, 25, 60), Color3.fromRGB(25, 18, 40))
+    HitStroke.Color = EXPAND_HITBOX_ENABLED and Color3.fromRGB(50, 255, 150) or Color3.fromRGB(200, 160, 60)
+
     local _, bossRoot = findBossRoot()
     if EXPAND_HITBOX_ENABLED and bossRoot then
         bossRoot.Size = Vector3.new(20, 20, 20)
@@ -588,11 +590,12 @@ end)
 SpeedBtn.MouseButton1Click:Connect(function()
     SPEED_BOOST_ENABLED = not SPEED_BOOST_ENABLED
     SpeedBtn.Text = SPEED_BOOST_ENABLED and "⚡ Speed Boost: ON" or "⚡ Speed Boost: OFF"
-    SpeedGrad.Color = SPEED_BOOST_ENABLED and ColorSequence.new(Color3.fromRGB(0, 180, 120), Color3.fromRGB(0, 100, 80)) or ColorSequence.new(ColorSequenceKeypoint.new(0, Color3.fromRGB(60, 30, 90)), ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 50, 100)))
-    
-    ListCharacter = LocalPlayer.Character
-    if ListCharacter and ListCharacter:FindFirstChildOfClass("Humanoid") then
-        ListCharacter:FindFirstChildOfClass("Humanoid").WalkSpeed = SPEED_BOOST_ENABLED and 32 or 16
+    SpeedGrad.Color = SPEED_BOOST_ENABLED and ColorSequence.new(Color3.fromRGB(20, 120, 70), Color3.fromRGB(10, 70, 40)) or ColorSequence.new(Color3.fromRGB(45, 25, 60), Color3.fromRGB(25, 18, 40))
+    SpeedStroke.Color = SPEED_BOOST_ENABLED and Color3.fromRGB(50, 255, 150) or Color3.fromRGB(200, 160, 60)
+
+    local character = LocalPlayer.Character
+    if character and character:FindFirstChildOfClass("Humanoid") then
+        character:FindFirstChildOfClass("Humanoid").WalkSpeed = SPEED_BOOST_ENABLED and 32 or 16
     end
 end)
 
@@ -601,8 +604,9 @@ local noFogActive = false
 FogBtn.MouseButton1Click:Connect(function()
     noFogActive = not noFogActive
     FogBtn.Text = noFogActive and "💡 Fullbright: ON" or "💡 Fullbright: OFF"
-    FogGrad.Color = noFogActive and ColorSequence.new(Color3.fromRGB(0, 180, 120), Color3.fromRGB(0, 100, 80)) or ColorSequence.new(ColorSequenceKeypoint.new(0, Color3.fromRGB(60, 30, 90)), ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 50, 100)))
-    
+    FogGrad.Color = noFogActive and ColorSequence.new(Color3.fromRGB(20, 120, 70), Color3.fromRGB(10, 70, 40)) or ColorSequence.new(Color3.fromRGB(45, 25, 60), Color3.fromRGB(25, 18, 40))
+    FogStroke.Color = noFogActive and Color3.fromRGB(50, 255, 150) or Color3.fromRGB(200, 160, 60)
+
     Lighting.FogEnd = noFogActive and 9e9 or defaultFog
     Lighting.Brightness = noFogActive and 2 or 1
 end)
