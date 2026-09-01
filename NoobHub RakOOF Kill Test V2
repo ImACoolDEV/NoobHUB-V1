@@ -1,612 +1,679 @@
--- Noob Hub | Imperial Edition (Dark/Gold Theme - No Purple)
-local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local Lighting = game:GetService("Lighting")
-local TweenService = game:GetService("TweenService")
+import {
+	Players,
+	Workspace,
+	RunService,
+	UserInputService,
+	Lighting,
+	TweenService,
+} from "@rbxts/services";
 
-local LocalPlayer = Players.LocalPlayer
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+// Get LocalPlayer and PlayerGui safely
+const localPlayer = Players.LocalPlayer;
+const playerGui = localPlayer.WaitForChild("PlayerGui") as PlayerGui;
 
--- Configuration Variables
-local TARGET_NAME = "THE_RAKE" -- Internal Target Model Name
-local DISPLAY_TARGET_NAME = "Rakoof" -- Visual Display Name
+// Configuration Variables
+const TARGET_NAME = "THE_RAKE"; // Internal Target Model Name
+const DISPLAY_TARGET_NAME = "Rakoof"; // Visual Display Name
 
-local AUTO_KILL_ENABLED = false
-local GODMODE_ENABLED = false
-local BRING_BOSS_ENABLED = false
-local EXPAND_HITBOX_ENABLED = false
-local SPEED_BOOST_ENABLED = false
-local AUTO_PICKUP_ITEMS_ENABLED = false
-local TOGGLE_KEY = Enum.KeyCode.RightControl 
+let autoKillEnabled = false;
+let godmodeEnabled = false;
+let bringBossEnabled = false;
+let expandHitboxEnabled = false;
+let speedBoostEnabled = false;
+let autoPickupItemsEnabled = false;
+const TOGGLE_KEY = Enum.KeyCode.RightControl;
 
-local connectionLoop = nil
-local bringLoop = nil
-local godConnection = nil
-local pickupLoop = nil
+let connectionLoop: RBXScriptConnection | undefined;
+let bringLoop: RBXScriptConnection | undefined;
+let godConnection: RBXScriptConnection | undefined;
+let pickupLoop: RBXScriptConnection | undefined;
 
--- Target Item Names
-local TARGET_ITEMS = {
-    "GoldenApple",
-    "LegendaryEnergy",
-    "IgnitionFlame",
-    "SnowFlakes",
-    "CorruptedHalo",
-    "StrangeBar",
-    "BurnedBone"
-}
+// Target Item Names
+const TARGET_ITEMS = [
+	"GoldenApple",
+	"LegendaryEnergy",
+	"IgnitionFlame",
+	"SnowFlakes",
+	"CorruptedHalo",
+	"StrangeBar",
+	"BurnedBone",
+];
 
--- HIGHEST PRIORITY AT TOP: GoldenClaws is checked FIRST
-local WEAPON_PRIORITY = {
-    "GoldenClaws",
-    "Golden Claws",
-    "UltraFish",
-    "TormentumAxe",
-    "Murasama",
-    "Ruinstrikers",
-    "StunStick",
-    "Stun Stick"
-}
+// HIGHEST PRIORITY AT TOP: GoldenClaws is checked FIRST
+const WEAPON_PRIORITY = [
+	"GoldenClaws",
+	"Golden Claws",
+	"Pan",
+	"GoldenPan",
+	"Golden Pan",
+	"BOOMSHAKALAKA",
+	"Axe",
+	"Kanata",
+	"KillerFish",
+	"Killer Fish",
+	"RainbowBoom",
+	"Rainbow Boom",
+	"Frostbite",
+	"Firebrand",
+	"UltraFish",
+	"TormentumAxe",
+	"Murasama",
+	"Ruinstrikers",
+	"StunStick",
+	"Stun Stick",
+];
 
 --------------------------------------------------------------------------------
 -- CORE IMMUNE HEAD-ANCHOR LOGIC
 --------------------------------------------------------------------------------
-local function findBossRoot()
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        if obj:IsA("Model") and (obj.Name == TARGET_NAME or string.lower(obj.Name) == string.lower(TARGET_NAME)) then
-            local targetPart = obj:FindFirstChild("Head")
-                or obj:FindFirstChild("HumanoidRootPart") 
-                or obj:FindFirstChild("UpperTorso") 
-                or obj:FindFirstChild("Torso") 
-                or obj.PrimaryPart
-            
-            if targetPart then
-                return obj, targetPart
-            end
-        end
-    end
-    return nil, nil
-end
+function findBossRoot(): [Model?, BasePart?] {
+	for (const obj of Workspace.GetDescendants()) {
+		if (obj.IsA("Model") && (obj.Name === TARGET_NAME || string.lower(obj.Name) === string.lower(TARGET_NAME))) {
+			const targetPart =
+				(obj.FindFirstChild("Head") as BasePart) ||
+				(obj.FindFirstChild("HumanoidRootPart") as BasePart) ||
+				(obj.FindFirstChild("UpperTorso") as BasePart) ||
+				(obj.FindFirstChild("Torso") as BasePart) ||
+				obj.PrimaryPart;
 
-local function applyImmuneHeadAnchor(targetModel, targetRoot)
-    local character = LocalPlayer.Character
-    if not character then return end
-    local hrp = character:FindFirstChild("HumanoidRootPart")
-    if not hrp or not targetRoot then return end
+			if (targetPart) {
+				return [obj, targetPart];
+			}
+		}
+	}
+	return [undefined, undefined];
+}
 
-    for _, part in ipairs(character:GetChildren()) do
-        if part:IsA("BasePart") then
-            part.CanCollide = false
-        end
-    end
+function applyImmuneHeadAnchor(targetModel: Model, targetRoot: BasePart): void {
+	const character = localPlayer.Character;
+	if (!character) return;
+	const hrp = character.FindFirstChild("HumanoidRootPart") as BasePart;
+	if (!hrp || !targetRoot) return;
 
-    for _, descendant in ipairs(targetModel:GetDescendants()) do
-        if descendant:IsA("TouchTransmitter") or descendant.Name == "TouchInterest" then
-            descendant:Destroy()
-        end
-    end
+	for (const part of character.GetChildren()) {
+		if (part.IsA("BasePart")) {
+			part.CanCollide = false;
+		}
+	}
 
-    local headPart = targetModel:FindFirstChild("Head") or targetRoot
-    local absoluteTopPosition = headPart.Position + Vector3.new(0, 5, 0)
-    hrp.CFrame = CFrame.new(absoluteTopPosition, headPart.Position)
-end
+	for (const descendant of targetModel.GetDescendants()) {
+		if (descendant.IsA("TouchTransmitter") || descendant.Name === "TouchInterest") {
+			descendant.Destroy();
+		}
+	}
+
+	const headPart = (targetModel.FindFirstChild("Head") as BasePart) || targetRoot;
+	const absoluteTopPosition = headPart.Position.add(new Vector3(0, 5, 0));
+	hrp.CFrame = new CFrame(absoluteTopPosition, headPart.Position);
+}
 
 --------------------------------------------------------------------------------
 -- IMPERIAL / ROYAL GUI CREATION (NO PURPLE)
 --------------------------------------------------------------------------------
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "NoobHubImperial"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = PlayerGui
+const screenGui = new Instance("ScreenGui");
+screenGui.Name = "NoobHubImperial";
+screenGui.ResetOnSpawn = false;
+screenGui.Parent = playerGui;
 
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 700, 0, 340)
-MainFrame.Position = UDim2.new(0.5, -350, 0.5, -170)
-MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
-MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
-MainFrame.Draggable = true 
-MainFrame.Parent = ScreenGui
+const mainFrame = new Instance("Frame");
+mainFrame.Size = new UDim2(0, 700, 0, 340);
+mainFrame.Position = new UDim2(0.5, -350, 0.5, -170);
+mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 18);
+mainFrame.BorderSizePixel = 0;
+mainFrame.Active = true;
+mainFrame.Draggable = true;
+mainFrame.Parent = screenGui;
 
-local MainGradient = Instance.new("UIGradient")
-MainGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 25, 30)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(15, 15, 18)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 10, 12))
-})
-MainGradient.Rotation = 45
-MainGradient.Parent = MainFrame
+const mainGradient = new Instance("UIGradient");
+mainGradient.Color = new ColorSequence([
+	new ColorSequenceKeypoint(0, Color3.fromRGB(25, 25, 30)),
+	new ColorSequenceKeypoint(0.5, Color3.fromRGB(15, 15, 18)),
+	new ColorSequenceKeypoint(1, Color3.fromRGB(10, 10, 12)),
+]);
+mainGradient.Rotation = 45;
+mainGradient.Parent = mainFrame;
 
-local FrameCorner = Instance.new("UICorner")
-FrameCorner.CornerRadius = UDim.new(0, 16)
-FrameCorner.Parent = MainFrame
+const frameCorner = new Instance("UICorner");
+frameCorner.CornerRadius = new UDim(0, 16);
+frameCorner.Parent = mainFrame;
 
-local FrameStroke = Instance.new("UIStroke")
-FrameStroke.Thickness = 2.5
-FrameStroke.Color = Color3.fromRGB(230, 180, 50)
-FrameStroke.Transparency = 0.1
-FrameStroke.Parent = MainFrame
+const frameStroke = new Instance("UIStroke");
+frameStroke.Thickness = 2.5;
+frameStroke.Color = Color3.fromRGB(230, 180, 50);
+frameStroke.Transparency = 0.1;
+frameStroke.Parent = mainFrame;
 
-local TitleBar = Instance.new("Frame")
-TitleBar.Size = UDim2.new(1, 0, 0, 48)
-TitleBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-TitleBar.Active = true
-TitleBar.Parent = MainFrame
+const titleBar = new Instance("Frame");
+titleBar.Size = new UDim2(1, 0, 0, 48);
+titleBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255);
+titleBar.Active = true;
+titleBar.Parent = mainFrame;
 
-local TitleGradient = Instance.new("UIGradient")
-TitleGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 30, 35)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(18, 18, 22))
-})
-TitleGradient.Parent = TitleBar
+const titleGradient = new Instance("UIGradient");
+titleGradient.Color = new ColorSequence([
+	new ColorSequenceKeypoint(0, Color3.fromRGB(30, 30, 35)),
+	new ColorSequenceKeypoint(1, Color3.fromRGB(18, 18, 22)),
+]);
+titleGradient.Parent = titleBar;
 
-local TitleCorner = Instance.new("UICorner")
-TitleCorner.CornerRadius = UDim.new(0, 16)
-TitleCorner.Parent = TitleBar
+const titleCorner = new Instance("UICorner");
+titleCorner.CornerRadius = new UDim(0, 16);
+titleCorner.Parent = titleBar;
 
-local TitleText = Instance.new("TextLabel")
-TitleText.Size = UDim2.new(1, -220, 1, 0)
-TitleText.Position = UDim2.new(0, 16, 0, 0)
-TitleText.BackgroundTransparency = 1
-TitleText.Text = "👑 NOOB HUB V2 — Imperial Edition"
-TitleText.TextColor3 = Color3.fromRGB(255, 220, 100)
-TitleText.TextXAlignment = Enum.TextXAlignment.Left
-TitleText.Font = Enum.Font.GothamBold
-TitleText.TextSize = 16
-TitleText.Parent = TitleBar
+const titleText = new Instance("TextLabel");
+titleText.Size = new UDim2(1, -220, 1, 0);
+titleText.Position = new UDim2(0, 16, 0, 0);
+titleText.BackgroundTransparency = 1;
+titleText.Text = "👑 NOOB HUB V2 — Imperial Edition";
+titleText.TextColor3 = Color3.fromRGB(255, 220, 100);
+titleText.TextXAlignment = Enum.TextXAlignment.Left;
+titleText.Font = Enum.Font.GothamBold;
+titleText.TextSize = 16;
+titleText.Parent = titleBar;
 
-local ToggleButton = Instance.new("TextButton")
-ToggleButton.Size = UDim2.new(0, 140, 0, 42)
-ToggleButton.Position = UDim2.new(0, 15, 0.4, 0)
-ToggleButton.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-ToggleButton.Text = "👑 NOOB HUB V2"
-ToggleButton.TextColor3 = Color3.fromRGB(255, 215, 0)
-ToggleButton.Font = Enum.Font.GothamBold
-ToggleButton.TextSize = 13
-ToggleButton.Active = true
-ToggleButton.Draggable = true
-ToggleButton.Parent = ScreenGui
+const toggleButton = new Instance("TextButton");
+toggleButton.Size = new UDim2(0, 140, 0, 42);
+toggleButton.Position = new UDim2(0, 15, 0.4, 0);
+toggleButton.BackgroundColor3 = Color3.fromRGB(20, 20, 25);
+toggleButton.Text = "👑 NOOB HUB V2";
+toggleButton.TextColor3 = Color3.fromRGB(255, 215, 0);
+toggleButton.Font = Enum.Font.GothamBold;
+toggleButton.TextSize = 13;
+toggleButton.Active = true;
+toggleButton.Draggable = true;
+toggleButton.Parent = screenGui;
 
-Instance.new("UICorner", ToggleButton).CornerRadius = UDim.new(0, 10)
-local ToggleStroke = Instance.new("UIStroke", ToggleButton)
-ToggleStroke.Thickness = 2
-ToggleStroke.Color = Color3.fromRGB(230, 180, 50)
+const toggleCorner = new Instance("UICorner");
+toggleCorner.CornerRadius = new UDim(0, 10);
+toggleCorner.Parent = toggleButton;
 
-local ScrollingContainer = Instance.new("ScrollingFrame")
-ScrollingContainer.Size = UDim2.new(1, -20, 1, -62)
-ScrollingContainer.Position = UDim2.new(0, 10, 0, 54)
-ScrollingContainer.BackgroundTransparency = 1
-ScrollingContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
-ScrollingContainer.AutomaticCanvasSize = Enum.AutomaticSize.Y
-ScrollingContainer.ScrollBarThickness = 5
-ScrollingContainer.ScrollBarImageColor3 = Color3.fromRGB(230, 180, 50)
-ScrollingContainer.Parent = MainFrame
+const toggleStroke = new Instance("UIStroke");
+toggleStroke.Thickness = 2;
+toggleStroke.Color = Color3.fromRGB(230, 180, 50);
+toggleStroke.Parent = toggleButton;
 
-local UIGridLayout = Instance.new("UIGridLayout")
-UIGridLayout.CellSize = UDim2.new(0, 218, 0, 44) 
-UIGridLayout.CellPadding = UDim2.new(0, 10, 0, 10)
-UIGridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-UIGridLayout.SortOrder = Enum.SortOrder.LayoutOrder
-UIGridLayout.Parent = ScrollingContainer
+const scrollingContainer = new Instance("ScrollingFrame");
+scrollingContainer.Size = new UDim2(1, -20, 1, -62);
+scrollingContainer.Position = new UDim2(0, 10, 0, 54);
+scrollingContainer.BackgroundTransparency = 1;
+scrollingContainer.CanvasSize = new UDim2(0, 0, 0, 0);
+scrollingContainer.AutomaticCanvasSize = Enum.AutomaticSize.Y;
+scrollingContainer.ScrollBarThickness = 5;
+scrollingContainer.ScrollBarImageColor3 = Color3.fromRGB(230, 180, 50);
+scrollingContainer.Parent = mainFrame;
+
+const uiGridLayout = new Instance("UIGridLayout");
+uiGridLayout.CellSize = new UDim2(0, 218, 0, 44);
+uiGridLayout.CellPadding = new UDim2(0, 10, 0, 10);
+uiGridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center;
+uiGridLayout.SortOrder = Enum.SortOrder.LayoutOrder;
+uiGridLayout.Parent = scrollingContainer;
 
 --------------------------------------------------------------------------------
 -- WINDOW CONTROLS
 --------------------------------------------------------------------------------
-local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0, 32, 0, 32)
-CloseBtn.Position = UDim2.new(1, -40, 0, 8)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 50)
-CloseBtn.Text = "✕"
-CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.TextSize = 14
-CloseBtn.Parent = TitleBar
-Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 8)
+const closeBtn = new Instance("TextButton");
+closeBtn.Size = new UDim2(0, 32, 0, 32);
+closeBtn.Position = new UDim2(1, -40, 0, 8);
+closeBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 50);
+closeBtn.Text = "✕";
+closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255);
+closeBtn.Font = Enum.Font.GothamBold;
+closeBtn.TextSize = 14;
+closeBtn.Parent = titleBar;
 
-CloseBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = false
-    ToggleButton.Visible = true
-end)
+const closeCorner = new Instance("UICorner");
+closeCorner.CornerRadius = new UDim(0, 8);
+closeCorner.Parent = closeBtn;
 
-local minimized = false
-local MinimizeBtn = Instance.new("TextButton")
-MinimizeBtn.Size = UDim2.new(0, 32, 0, 32)
-MinimizeBtn.Position = UDim2.new(1, -78, 0, 8)
-MinimizeBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 40)
-MinimizeBtn.Text = "—"
-MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-MinimizeBtn.Font = Enum.Font.GothamBold
-MinimizeBtn.TextSize = 14
-MinimizeBtn.Parent = TitleBar
-Instance.new("UICorner", MinimizeBtn).CornerRadius = UDim.new(0, 8)
+closeBtn.MouseButton1Click.Connect(() => {
+	mainFrame.Visible = false;
+	toggleButton.Visible = true;
+});
 
-MinimizeBtn.MouseButton1Click:Connect(function()
-    minimized = not minimized
-    ScrollingContainer.Visible = not minimized
-    MainFrame.Size = minimized and UDim2.new(0, 700, 0, 48) or UDim2.new(0, 700, 0, 340)
-    MinimizeBtn.Text = minimized and "+" or "—"
-end)
+let minimized = false;
+const minimizeBtn = new Instance("TextButton");
+minimizeBtn.Size = new UDim2(0, 32, 0, 32);
+minimizeBtn.Position = new UDim2(1, -78, 0, 8);
+minimizeBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 40);
+minimizeBtn.Text = "—";
+minimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255);
+minimizeBtn.Font = Enum.Font.GothamBold;
+minimizeBtn.TextSize = 14;
+minimizeBtn.Parent = titleBar;
 
-ToggleButton.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
-end)
+const minimizeCorner = new Instance("UICorner");
+minimizeCorner.CornerRadius = new UDim(0, 8);
+minimizeCorner.Parent = minimizeBtn;
+
+minimizeBtn.MouseButton1Click.Connect(() => {
+	minimized = !minimized;
+	scrollingContainer.Visible = !minimized;
+	mainFrame.Size = minimized ? new UDim2(0, 700, 0, 48) : new UDim2(0, 700, 0, 340);
+	minimizeBtn.Text = minimized ? "+" : "—";
+});
+
+toggleButton.MouseButton1Click.Connect(() => {
+	mainFrame.Visible = !mainFrame.Visible;
+});
 
 --------------------------------------------------------------------------------
 -- BUTTON BUILDER
 --------------------------------------------------------------------------------
-local function CreateButton(text, order)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, 218, 0, 44)
-    btn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Text = text
-    btn.TextColor3 = Color3.fromRGB(240, 240, 240)
-    btn.Font = Enum.Font.GothamSemibold
-    btn.TextSize = 12
-    btn.LayoutOrder = order
-    btn.Parent = ScrollingContainer
-    
-    local btnGradient = Instance.new("UIGradient")
-    btnGradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(32, 32, 38)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(18, 18, 22))
-    })
-    btnGradient.Parent = btn
+function createButton(text: string, order: number): [TextButton, UIGradient, UIStroke] {
+	const btn = new Instance("TextButton");
+	btn.Size = new UDim2(0, 218, 0, 44);
+	btn.BackgroundColor3 = Color3.fromRGB(255, 255, 255);
+	btn.Text = text;
+	btn.TextColor3 = Color3.fromRGB(240, 240, 240);
+	btn.Font = Enum.Font.GothamSemibold;
+	btn.TextSize = 12;
+	btn.LayoutOrder = order;
+	btn.Parent = scrollingContainer;
 
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 10)
-    corner.Parent = btn
-    
-    local stroke = Instance.new("UIStroke")
-    stroke.Thickness = 1.2
-    stroke.Color = Color3.fromRGB(200, 160, 60)
-    stroke.Transparency = 0.4
-    stroke.Parent = btn
+	const btnGradient = new Instance("UIGradient");
+	btnGradient.Color = new ColorSequence([
+		new ColorSequenceKeypoint(0, Color3.fromRGB(32, 32, 38)),
+		new ColorSequenceKeypoint(1, Color3.fromRGB(18, 18, 22)),
+	]);
+	btnGradient.Parent = btn;
 
-    btn.MouseEnter:Connect(function()
-        TweenService:Create(stroke, TweenInfo.new(0.2), {Transparency = 0, Color = Color3.fromRGB(255, 215, 0)}):Play()
-    end)
-    btn.MouseLeave:Connect(function()
-        TweenService:Create(stroke, TweenInfo.new(0.2), {Transparency = 0.4, Color = Color3.fromRGB(200, 160, 60)}):Play()
-    end)
-    
-    return btn, btnGradient, stroke
-end
+	const corner = new Instance("UICorner");
+	corner.CornerRadius = new UDim(0, 10);
+	corner.Parent = btn;
 
-local CaveABtn = CreateButton("⛰️ Teleport Cave A", 1)
-local CaveBBtn = CreateButton("⛰️ Teleport Cave B", 2)
-local SafezoneBtn = CreateButton("🛡️ Safezone TP", 3)
-local TPBtn = CreateButton("🎯 TP Above Head", 4)
-local AutoKillBtn, AutoKillGrad, AutoKillStroke = CreateButton("⚔️ Auto Kill: OFF", 5)
-local GodModeBtn, GodGrad, GodStroke = CreateButton("🛡️ God Mode: OFF", 6)
-local BringBtn, BringGrad, BringStroke = CreateButton("🧲 Bring " .. DISPLAY_TARGET_NAME .. ": OFF", 7)
-local HitboxBtn, HitGrad, HitStroke = CreateButton("📦 Expand Hitbox: OFF", 8)
-local SpeedBtn, SpeedGrad, SpeedStroke = CreateButton("⚡ Speed Boost: OFF", 9)
-local FogBtn, FogGrad, FogStroke = CreateButton("💡 Fullbright: OFF", 10)
-local PickupBtn, PickupGrad, PickupStroke = CreateButton("🎁 Auto Pickup Items: OFF", 11)
+	const stroke = new Instance("UIStroke");
+	stroke.Thickness = 1.2;
+	stroke.Color = Color3.fromRGB(200, 160, 60);
+	stroke.Transparency = 0.4;
+	stroke.Parent = btn;
+
+	btn.MouseEnter.Connect(() => {
+		TweenService.Create(stroke, new TweenInfo(0.2), { Transparency: 0, Color: Color3.fromRGB(255, 215, 0) }).Play();
+	});
+
+	btn.MouseLeave.Connect(() => {
+		TweenService.Create(stroke, new TweenInfo(0.2), { Transparency: 0.4, Color: Color3.fromRGB(200, 160, 60) }).Play();
+	});
+
+	return [btn, btnGradient, stroke];
+}
+
+const [caveABtn] = createButton("⛰️ Teleport Cave A", 1);
+const [caveBBtn] = createButton("⛰️ Teleport Cave B", 2);
+const [safezoneBtn] = createButton("🛡️ Safezone TP", 3);
+const [tpBtn] = createButton("🎯 TP Above Head", 4);
+const [autoKillBtn, autoKillGrad, autoKillStroke] = createButton("⚔️ Auto Kill: OFF", 5);
+const [godModeBtn, godGrad, godStroke] = createButton("🛡️ God Mode: OFF", 6);
+const [bringBtn, bringGrad, bringStroke] = createButton(`🧲 Bring ${DISPLAY_TARGET_NAME}: OFF`, 7);
+const [hitboxBtn, hitGrad, hitStroke] = createButton("📦 Expand Hitbox: OFF", 8);
+const [speedBtn, speedGrad, speedStroke] = createButton("⚡ Speed Boost: OFF", 9);
+const [fogBtn, fogGrad, fogStroke] = createButton("💡 Fullbright: OFF", 10);
+const [pickupBtn, pickupGrad, pickupStroke] = createButton("🎁 Auto Pickup Items: OFF", 11);
 
 --------------------------------------------------------------------------------
 -- KEYBIND TOGGLE
 --------------------------------------------------------------------------------
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    if input.KeyCode == TOGGLE_KEY then
-        MainFrame.Visible = not MainFrame.Visible
-    end
-end)
+UserInputService.InputBegan.Connect((input, gameProcessed) => {
+	if (gameProcessed) return;
+	if (input.KeyCode === TOGGLE_KEY) {
+		mainFrame.Visible = !mainFrame.Visible;
+	}
+});
 
 --------------------------------------------------------------------------------
 -- TELEPORTS
 --------------------------------------------------------------------------------
-local function findLocationPart(targetName)
-    local miscFolder = Workspace:FindFirstChild("Misc")
-    if miscFolder then
-        local rakoofSpawns = miscFolder:FindFirstChild("RakoofSpawns")
-        if rakoofSpawns and rakoofSpawns:FindFirstChild(targetName) then
-            return rakoofSpawns:FindFirstChild(targetName)
-        end
-    end
+function findLocationPart(targetName: string): Instance | undefined {
+	const miscFolder = Workspace.FindFirstChild("Misc");
+	if (miscFolder) {
+		const rakoofSpawns = miscFolder.FindFirstChild("RakoofSpawns");
+		if (rakoofSpawns && rakoofSpawns.FindFirstChild(targetName)) {
+			return rakoofSpawns.FindFirstChild(targetName);
+		}
+	}
 
-    local locFolder = Workspace:FindFirstChild("LocationsIndicator")
-    if locFolder then
-        local targetAltName = (targetName == "CaveA") and "Cave1" or (targetName == "CaveB") and "Cave2" or targetName
-        if locFolder:FindFirstChild(targetAltName) then return locFolder:FindFirstChild(targetAltName) end
-        if locFolder:FindFirstChild(targetName) then return locFolder:FindFirstChild(targetName) end
-    end
+	const locFolder = Workspace.FindFirstChild("LocationsIndicator");
+	if (locFolder) {
+		const targetAltName = targetName === "CaveA" ? "Cave1" : targetName === "CaveB" ? "Cave2" : targetName;
+		if (locFolder.FindFirstChild(targetAltName)) return locFolder.FindFirstChild(targetAltName);
+		if (locFolder.FindFirstChild(targetName)) return locFolder.FindFirstChild(targetName);
+	}
 
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        if obj.Name == targetName then return obj end
-    end
-    return nil
-end
+	for (const obj of Workspace.GetDescendants()) {
+		if (obj.Name === targetName) return obj;
+	}
+	return undefined;
+}
 
-local function teleportToLocation(targetName)
-    local character = LocalPlayer.Character
-    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
-    
-    local targetObj = findLocationPart(targetName)
-    if targetObj then
-        local targetPart = targetObj:IsA("BasePart") and targetObj or (targetObj:IsA("Model") and (targetObj.PrimaryPart or targetObj:FindFirstChildWhichIsA("BasePart")))
-        if targetPart then
-            character.HumanoidRootPart.CFrame = targetPart.CFrame + Vector3.new(0, 3, 0)
-        end
-    end
-end
+function teleportToLocation(targetName: string): void {
+	const character = localPlayer.Character;
+	if (!character || !character.FindFirstChild("HumanoidRootPart")) return;
 
-CaveABtn.MouseButton1Click:Connect(function() teleportToLocation("CaveA") end)
-CaveBBtn.MouseButton1Click:Connect(function() teleportToLocation("CaveB") end)
+	const targetObj = findLocationPart(targetName);
+	if (targetObj) {
+		const targetPart = targetObj.IsA("BasePart")
+			? targetObj
+			: targetObj.IsA("Model")
+			? targetObj.PrimaryPart || (targetObj.FindFirstChildWhichIsA("BasePart") as BasePart)
+			: undefined;
 
-SafezoneBtn.MouseButton1Click:Connect(function()
-    local character = LocalPlayer.Character
-    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
-    
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        if obj:IsA("Model") and not Players:GetPlayerFromCharacter(obj) then
-            local nameLower = string.lower(obj.Name)
-            if string.find(nameLower, "ready") or string.find(nameLower, "safe") or string.find(nameLower, "spawn") or string.find(nameLower, "npc") then
-                local root = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Torso") or obj.PrimaryPart
-                if root then
-                    character.HumanoidRootPart.CFrame = root.CFrame * CFrame.new(0, 0, -3)
-                    return
-                end
-            end
-        end
-    end
+		if (targetPart) {
+			(character.FindFirstChild("HumanoidRootPart") as BasePart).CFrame = targetPart.CFrame.add(new Vector3(0, 3, 0));
+		}
+	}
+}
 
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        if obj:IsA("SpawnLocation") then
-            character.HumanoidRootPart.CFrame = obj.CFrame + Vector3.new(0, 3.5, 0)
-            break
-        end
-    end
-end)
+caveABtn.MouseButton1Click.Connect(() => teleportToLocation("CaveA"));
+caveBBtn.MouseButton1Click.Connect(() => teleportToLocation("CaveB"));
+
+safezoneBtn.MouseButton1Click.Connect(() => {
+	const character = localPlayer.Character;
+	if (!character || !character.FindFirstChild("HumanoidRootPart")) return;
+
+	for (const obj of Workspace.GetDescendants()) {
+		if (obj.IsA("Model") && !Players.GetPlayerFromCharacter(obj)) {
+			const nameLower = string.lower(obj.Name);
+			if (
+				string.find(nameLower, "ready")[0] !== undefined ||
+				string.find(nameLower, "safe")[0] !== undefined ||
+				string.find(nameLower, "spawn")[0] !== undefined ||
+				string.find(nameLower, "npc")[0] !== undefined
+			) {
+				const root =
+					(obj.FindFirstChild("HumanoidRootPart") as BasePart) ||
+					(obj.FindFirstChild("Torso") as BasePart) ||
+					obj.PrimaryPart;
+
+				if (root) {
+					(character.FindFirstChild("HumanoidRootPart") as BasePart).CFrame = root.CFrame.mul(new CFrame(0, 0, -3));
+					return;
+				}
+			}
+		}
+	}
+
+	for (const obj of Workspace.GetDescendants()) {
+		if (obj.IsA("SpawnLocation")) {
+			(character.FindFirstChild("HumanoidRootPart") as BasePart).CFrame = obj.CFrame.add(new Vector3(0, 3.5, 0));
+			break;
+		}
+	}
+});
 
 --------------------------------------------------------------------------------
 -- ADVANCED YELLOW OUTLINE & DROPS AUTO PICKUP LOGIC
 --------------------------------------------------------------------------------
-local function isInsidePlayerInventory(item)
-    local ancestor = item.Parent
-    while ancestor and ancestor ~= Workspace do
-        if Players:GetPlayerFromCharacter(ancestor) or ancestor:IsA("Backpack") or ancestor.Name == "Backpack" then
-            return true
-        end
-        ancestor = ancestor.Parent
-    end
-    return false
-end
+function isInsidePlayerInventory(item: Instance): boolean {
+	let ancestor: Instance | undefined = item.Parent;
+	while (ancestor && ancestor !== Workspace) {
+		if (Players.GetPlayerFromCharacter(ancestor) || ancestor.IsA("Backpack") || ancestor.Name === "Backpack") {
+			return true;
+		}
+		ancestor = ancestor.Parent;
+	}
+	return false;
+}
 
-local function isYellowColor(color)
-    if not color then return false end
-    return (color.R > 0.6 and color.G > 0.6 and color.B < 0.4)
-end
+function isYellowColor(color?: Color3): boolean {
+	if (!color) return false;
+	return color.R > 0.6 && color.G > 0.6 && color.B < 0.4;
+}
 
-local function hasYellowOutline(obj)
-    for _, child in ipairs(obj:GetDescendants()) do
-        if child:IsA("Highlight") then
-            if isYellowColor(child.OutlineColor) or isYellowColor(child.FillColor) then
-                return true
-            end
-        elseif child:IsA("SelectionBox") then
-            if isYellowColor(child.Color3) then
-                return true
-            end
-        elseif child:IsA("UIStroke") then
-            if isYellowColor(child.Color) then
-                return true
-            end
-        end
-    end
-    return false
-end
+function hasYellowOutline(obj: Instance): boolean {
+	for (const child of obj.GetDescendants()) {
+		if (child.IsA("Highlight")) {
+			if (isYellowColor(child.OutlineColor) || isYellowColor(child.FillColor)) {
+				return true;
+			}
+		} else if (child.IsA("SelectionBox")) {
+			if (isYellowColor(child.Color3)) {
+				return true;
+			}
+		} else if (child.IsA("UIStroke")) {
+			if (isYellowColor(child.Color)) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
 
-local function getPartFromItem(item)
-    if item:IsA("BasePart") then
-        return item
-    elseif item:IsA("Model") then
-        return item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
-    else
-        return item:FindFirstChildWhichIsA("BasePart")
-    end
-end
+function getPartFromItem(item: Instance): BasePart | undefined {
+	if (item.IsA("BasePart")) {
+		return item;
+	} else if (item.IsA("Model")) {
+		return item.PrimaryPart || (item.FindFirstChildWhichIsA("BasePart") as BasePart);
+	} else {
+		return item.FindFirstChildWhichIsA("BasePart") as BasePart;
+	}
+}
 
-local function getPickableItems()
-    local items = {}
-    local dropsFolder = Workspace:FindFirstChild("Drops") or Workspace:FindFirstChild("drops")
-    local searchContainer = dropsFolder and dropsFolder:GetDescendants() or Workspace:GetDescendants()
-    
-    for _, obj in ipairs(searchContainer) do
-        if not isInsidePlayerInventory(obj) then
-            if hasYellowOutline(obj) then
-                table.insert(items, obj)
-            else
-                for _, targetName in ipairs(TARGET_ITEMS) do
-                    if string.find(obj.Name, targetName) then
-                        table.insert(items, obj)
-                        break
-                    end
-                end
-            end
-        end
-    end
-    return items
-end
+function getPickableItems(): Instance[] {
+	const items: Instance[] = [];
+	const dropsFolder = Workspace.FindFirstChild("Drops") || Workspace.FindFirstChild("drops");
+	const searchContainer = dropsFolder ? dropsFolder.GetDescendants() : Workspace.GetDescendants();
 
-PickupBtn.MouseButton1Click:Connect(function()
-    AUTO_PICKUP_ITEMS_ENABLED = not AUTO_PICKUP_ITEMS_ENABLED
-    PickupBtn.Text = AUTO_PICKUP_ITEMS_ENABLED and "🎁 Auto Pickup Items: ON" or "🎁 Auto Pickup Items: OFF"
-    PickupGrad.Color = AUTO_PICKUP_ITEMS_ENABLED and ColorSequence.new(Color3.fromRGB(20, 120, 70), Color3.fromRGB(10, 70, 40)) or ColorSequence.new(Color3.fromRGB(32, 32, 38), Color3.fromRGB(18, 18, 22))
-    PickupStroke.Color = AUTO_PICKUP_ITEMS_ENABLED and Color3.fromRGB(50, 255, 150) or Color3.fromRGB(200, 160, 60)
+	for (const obj of searchContainer) {
+		if (!isInsidePlayerInventory(obj)) {
+			if (hasYellowOutline(obj)) {
+				items.push(obj);
+			} else {
+				for (const targetName of TARGET_ITEMS) {
+					if (string.find(obj.Name, targetName)[0] !== undefined) {
+						items.push(obj);
+						break;
+					}
+				}
+			}
+		}
+	}
+	return items;
+}
 
-    if AUTO_PICKUP_ITEMS_ENABLED then
-        pickupLoop = RunService.Heartbeat:Connect(function()
-            local character = LocalPlayer.Character
-            if not character or not character:FindFirstChild("HumanoidRootPart") then return end
-            local hrp = character.HumanoidRootPart
+pickupBtn.MouseButton1Click.Connect(() => {
+	autoPickupItemsEnabled = !autoPickupItemsEnabled;
+	pickupBtn.Text = autoPickupItemsEnabled ? "🎁 Auto Pickup Items: ON" : "🎁 Auto Pickup Items: OFF";
+	pickupGrad.Color = autoPickupItemsEnabled
+		? new ColorSequence(Color3.fromRGB(20, 120, 70), Color3.fromRGB(10, 70, 40))
+		: new ColorSequence(Color3.fromRGB(32, 32, 38), Color3.fromRGB(18, 18, 22));
+	pickupStroke.Color = autoPickupItemsEnabled ? Color3.fromRGB(50, 255, 150) : Color3.fromRGB(200, 160, 60);
 
-            local pickableItems = getPickableItems()
-            for _, item in ipairs(pickableItems) do
-                local part = getPartFromItem(item)
-                if part then
-                    part.CFrame = hrp.CFrame
-                end
-            end
-        end)
-    else
-        if pickupLoop then pickupLoop:Disconnect() pickupLoop = nil end
-    end
-end)
+	if (autoPickupItemsEnabled) {
+		pickupLoop = RunService.Heartbeat.Connect(() => {
+			const character = localPlayer.Character;
+			if (!character || !character.FindFirstChild("HumanoidRootPart")) return;
+			const hrp = character.FindFirstChild("HumanoidRootPart") as BasePart;
+
+			const pickableItems = getPickableItems();
+			for (const item of pickableItems) {
+				const part = getPartFromItem(item);
+				if (part) {
+					part.CFrame = hrp.CFrame;
+				}
+			}
+		});
+	} else {
+		if (pickupLoop) {
+			pickupLoop.Disconnect();
+			pickupLoop = undefined;
+		}
+	}
+});
 
 --------------------------------------------------------------------------------
 -- GOD MODE & IMPROVED WEAPON SELECTION AUTO KILL
 --------------------------------------------------------------------------------
-GodModeBtn.MouseButton1Click:Connect(function()
-    GODMODE_ENABLED = not GODMODE_ENABLED
-    GodModeBtn.Text = GODMODE_ENABLED and "🛡️ God Mode: ON" or "🛡️ God Mode: OFF"
-    GodGrad.Color = GODMODE_ENABLED and ColorSequence.new(Color3.fromRGB(20, 120, 70), Color3.fromRGB(10, 70, 40)) or ColorSequence.new(Color3.fromRGB(32, 32, 38), Color3.fromRGB(18, 18, 22))
-    GodStroke.Color = GODMODE_ENABLED and Color3.fromRGB(50, 255, 150) or Color3.fromRGB(200, 160, 60)
+godModeBtn.MouseButton1Click.Connect(() => {
+	godmodeEnabled = !godmodeEnabled;
+	godModeBtn.Text = godmodeEnabled ? "🛡️ God Mode: ON" : "🛡️ God Mode: OFF";
+	godGrad.Color = godmodeEnabled
+		? new ColorSequence(Color3.fromRGB(20, 120, 70), Color3.fromRGB(10, 70, 40))
+		: new ColorSequence(Color3.fromRGB(32, 32, 38), Color3.fromRGB(18, 18, 22));
+	godStroke.Color = godmodeEnabled ? Color3.fromRGB(50, 255, 150) : Color3.fromRGB(200, 160, 60);
 
-    if GODMODE_ENABLED then
-        godConnection = RunService.Heartbeat:Connect(function()
-            local char = LocalPlayer.Character
-            if char and char:FindFirstChildOfClass("Humanoid") then
-                local hum = char:FindFirstChildOfClass("Humanoid")
-                hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-                hum.Health = hum.MaxHealth
-            end
-        end)
-    else
-        if godConnection then godConnection:Disconnect() godConnection = nil end
-    end
-end)
+	if (godmodeEnabled) {
+		godConnection = RunService.Heartbeat.Connect(() => {
+			const char = localPlayer.Character;
+			if (char && char.FindFirstChildOfClass("Humanoid")) {
+				const hum = char.FindFirstChildOfClass("Humanoid") as Humanoid;
+				hum.SetStateEnabled(Enum.HumanoidStateType.Dead, false);
+				hum.Health = hum.MaxHealth;
+			}
+		});
+	} else {
+		if (godConnection) {
+			godConnection.Disconnect();
+			godConnection = undefined;
+		}
+	}
+});
 
-local function getBestWeapon()
-    local character = LocalPlayer.Character
-    local backpack = LocalPlayer:FindFirstChild("Backpack")
-    if not character or not backpack then return nil end
+function getBestWeapon(): Tool | undefined {
+	const character = localPlayer.Character;
+	const backpack = localPlayer.FindFirstChild("Backpack");
+	if (!character || !backpack) return undefined;
 
-    for _, targetName in ipairs(WEAPON_PRIORITY) do
-        local targetLower = string.lower(targetName)
-        
-        for _, child in ipairs(character:GetChildren()) do
-            if child:IsA("Tool") and string.find(string.lower(child.Name), targetLower) then
-                return child
-            end
-        end
-        
-        for _, child in ipairs(backpack:GetChildren()) do
-            if child:IsA("Tool") and string.find(string.lower(child.Name), targetLower) then
-                return child
-            end
-        end
-    end
-    
-    for _, tool in ipairs(backpack:GetChildren()) do
-        if tool:IsA("Tool") then return tool end
-    end
+	for (const targetName of WEAPON_PRIORITY) {
+		const targetLower = string.lower(targetName);
 
-    return nil
-end
+		for (const child of character.GetChildren()) {
+			if (child.IsA("Tool") && string.find(string.lower(child.Name), targetLower)[0] !== undefined) {
+				return child;
+			}
+		}
 
-local function equipAndAttack()
-    local character = LocalPlayer.Character
-    if not character then return end
-    local humanoid = character:FindFirstChildOfClass("Humanoid")
-    local bestTool = getBestWeapon()
-    
-    if humanoid and bestTool then
-        if bestTool.Parent ~= character then
-            humanoid:EquipTool(bestTool)
-        end
-        bestTool:Activate()
+		for (const child of backpack.GetChildren()) {
+			if (child.IsA("Tool") && string.find(string.lower(child.Name), targetLower)[0] !== undefined) {
+				return child;
+			}
+		}
+	}
 
-        local remote = bestTool:FindFirstChildOfClass("RemoteEvent") 
-            or bestTool:FindFirstChildOfClass("BindableEvent")
-        if remote then
-            remote:FireServer()
-        end
-    end
-end
+	for (const tool of backpack.GetChildren()) {
+		if (tool.IsA("Tool")) return tool;
+	}
 
-TPBtn.MouseButton1Click:Connect(function()
-    local bossModel, bossRoot = findBossRoot()
-    if bossModel and bossRoot then applyImmuneHeadAnchor(bossModel, bossRoot) end
-end)
+	return undefined;
+}
 
-AutoKillBtn.MouseButton1Click:Connect(function()
-    AUTO_KILL_ENABLED = not AUTO_KILL_ENABLED
-    AutoKillBtn.Text = AUTO_KILL_ENABLED and "⚔️ Auto Kill: ON" or "⚔️ Auto Kill: OFF"
-    AutoKillGrad.Color = AUTO_KILL_ENABLED and ColorSequence.new(Color3.fromRGB(20, 120, 70), Color3.fromRGB(10, 70, 40)) or ColorSequence.new(Color3.fromRGB(32, 32, 38), Color3.fromRGB(18, 18, 22))
-    AutoKillStroke.Color = AUTO_KILL_ENABLED and Color3.fromRGB(50, 255, 150) or Color3.fromRGB(200, 160, 60)
+function equipAndAttack(): void {
+	const character = localPlayer.Character;
+	if (!character) return;
+	const humanoid = character.FindFirstChildOfClass("Humanoid") as Humanoid;
+	const bestTool = getBestWeapon();
 
-    if AUTO_KILL_ENABLED then
-        connectionLoop = RunService.Heartbeat:Connect(function()
-            local bossModel, bossRoot = findBossRoot()
-            if bossModel and bossRoot then
-                applyImmuneHeadAnchor(bossModel, bossRoot)
-                equipAndAttack()
-            end
-        end)
-    else
-        if connectionLoop then connectionLoop:Disconnect() connectionLoop = nil end
-    end
-end)
+	if (humanoid && bestTool) {
+		if (bestTool.Parent !== character) {
+			humanoid.EquipTool(bestTool);
+		}
+		bestTool.Activate();
+
+		const remote =
+			(bestTool.FindFirstChildOfClass("RemoteEvent") as RemoteEvent) ||
+			(bestTool.FindFirstChildOfClass("BindableEvent") as BindableEvent);
+		if (remote && remote.IsA("RemoteEvent")) {
+			remote.FireServer();
+		}
+	}
+}
+
+tpBtn.MouseButton1Click.Connect(() => {
+	const [bossModel, bossRoot] = findBossRoot();
+	if (bossModel && bossRoot) applyImmuneHeadAnchor(bossModel, bossRoot);
+});
+
+autoKillBtn.MouseButton1Click.Connect(() => {
+	autoKillEnabled = !autoKillEnabled;
+	autoKillBtn.Text = autoKillEnabled ? "⚔️ Auto Kill: ON" : "⚔️ Auto Kill: OFF";
+	autoKillGrad.Color = autoKillEnabled
+		? new ColorSequence(Color3.fromRGB(20, 120, 70), Color3.fromRGB(10, 70, 40))
+		: new ColorSequence(Color3.fromRGB(32, 32, 38), Color3.fromRGB(18, 18, 22));
+	autoKillStroke.Color = autoKillEnabled ? Color3.fromRGB(50, 255, 150) : Color3.fromRGB(200, 160, 60);
+
+	if (autoKillEnabled) {
+		connectionLoop = RunService.Heartbeat.Connect(() => {
+			const [bossModel, bossRoot] = findBossRoot();
+			if (bossModel && bossRoot) {
+				applyImmuneHeadAnchor(bossModel, bossRoot);
+				equipAndAttack();
+			}
+		});
+	} else {
+		if (connectionLoop) {
+			connectionLoop.Disconnect();
+			connectionLoop = undefined;
+		}
+	}
+});
 
 --------------------------------------------------------------------------------
 -- MISC UTILITIES
 --------------------------------------------------------------------------------
-BringBtn.MouseButton1Click:Connect(function()
-    BRING_BOSS_ENABLED = not BRING_BOSS_ENABLED
-    BringBtn.Text = BRING_BOSS_ENABLED and ("🧲 Bring " .. DISPLAY_TARGET_NAME .. ": ON") or ("🧲 Bring " .. DISPLAY_TARGET_NAME .. ": OFF")
-    BringGrad.Color = BRING_BOSS_ENABLED and ColorSequence.new(Color3.fromRGB(20, 120, 70), Color3.fromRGB(10, 70, 40)) or ColorSequence.new(Color3.fromRGB(32, 32, 38), Color3.fromRGB(18, 18, 22))
-    BringStroke.Color = BRING_BOSS_ENABLED and Color3.fromRGB(50, 255, 150) or Color3.fromRGB(200, 160, 60)
+bringBtn.MouseButton1Click.Connect(() => {
+	bringBossEnabled = !bringBossEnabled;
+	bringBtn.Text = bringBossEnabled ? `🧲 Bring ${DISPLAY_TARGET_NAME}: ON` : `🧲 Bring ${DISPLAY_TARGET_NAME}: OFF`;
+	bringGrad.Color = bringBossEnabled
+		? new ColorSequence(Color3.fromRGB(20, 120, 70), Color3.fromRGB(10, 70, 40))
+		: new ColorSequence(Color3.fromRGB(32, 32, 38), Color3.fromRGB(18, 18, 22));
+	bringStroke.Color = bringBossEnabled ? Color3.fromRGB(50, 255, 150) : Color3.fromRGB(200, 160, 60);
 
-    if BRING_BOSS_ENABLED then
-        bringLoop = RunService.Heartbeat:Connect(function()
-            local _, bossRoot = findBossRoot()
-            local character = LocalPlayer.Character
-            if bossRoot and character and character:FindFirstChild("HumanoidRootPart") then
-                bossRoot.CFrame = character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -3.5)
-            end
-        end)
-    else
-        if bringLoop then bringLoop:Disconnect() bringLoop = nil end
-    end
-end)
+	if (bringBossEnabled) {
+		bringLoop = RunService.Heartbeat.Connect(() => {
+			const [, bossRoot] = findBossRoot();
+			const character = localPlayer.Character;
+			if (bossRoot && character && character.FindFirstChild("HumanoidRootPart")) {
+				bossRoot.CFrame = (character.FindFirstChild("HumanoidRootPart") as BasePart).CFrame.mul(new CFrame(0, 0, -3.5));
+			}
+		});
+	} else {
+		if (bringLoop) {
+			bringLoop.Disconnect();
+			bringLoop = undefined;
+		}
+	}
+});
 
-HitboxBtn.MouseButton1Click:Connect(function()
-    EXPAND_HITBOX_ENABLED = not EXPAND_HITBOX_ENABLED
-    HitboxBtn.Text = EXPAND_HITBOX_ENABLED and "📦 Expand Hitbox: ON" or "📦 Expand Hitbox: OFF"
-    HitGrad.Color = EXPAND_HITBOX_ENABLED and ColorSequence.new(Color3.fromRGB(20, 120, 70), Color3.fromRGB(10, 70, 40)) or ColorSequence.new(Color3.fromRGB(32, 32, 38), Color3.fromRGB(18, 18, 22))
-    HitStroke.Color = EXPAND_HITBOX_ENABLED and Color3.fromRGB(50, 255, 150) or Color3.fromRGB(200, 160, 60)
+hitboxBtn.MouseButton1Click.Connect(() => {
+	expandHitboxEnabled = !expandHitboxEnabled;
+	hitboxBtn.Text = expandHitboxEnabled ? "📦 Expand Hitbox: ON" : "📦 Expand Hitbox: OFF";
+	hitGrad.Color = expandHitboxEnabled
+		? new ColorSequence(Color3.fromRGB(20, 120, 70), Color3.fromRGB(10, 70, 40))
+		: new ColorSequence(Color3.fromRGB(32, 32, 38), Color3.fromRGB(18, 18, 22));
+	hitStroke.Color = expandHitboxEnabled ? Color3.fromRGB(50, 255, 150) : Color3.fromRGB(200, 160, 60);
 
-    local _, bossRoot = findBossRoot()
-    if EXPAND_HITBOX_ENABLED and bossRoot then
-        bossRoot.Size = Vector3.new(20, 20, 20)
-        bossRoot.Transparency = 0.7
-        bossRoot.CanCollide = false
-    end
-end)
+	const [, bossRoot] = findBossRoot();
+	if (expandHitboxEnabled && bossRoot) {
+		bossRoot.Size = new Vector3(20, 20, 20);
+		bossRoot.Transparency = 0.7;
+		bossRoot.CanCollide = false;
+	}
+});
 
-SpeedBtn.MouseButton1Click:Connect(function()
-    SPEED_BOOST_ENABLED = not SPEED_BOOST_ENABLED
-    SpeedBtn.Text = SPEED_BOOST_ENABLED and "⚡ Speed Boost: ON" or "⚡ Speed Boost: OFF"
-    SpeedGrad.Color = SPEED_BOOST_ENABLED and ColorSequence.new(Color3.fromRGB(20, 120, 70), Color3.fromRGB(10, 70, 40)) or ColorSequence.new(Color3.fromRGB(32, 32, 38), Color3.fromRGB(18, 18, 22))
-    SpeedStroke.Color = SPEED_BOOST_ENABLED and Color3.fromRGB(50, 255, 150) or Color3.fromRGB(200, 160, 60)
+speedBtn.MouseButton1Click.Connect(() => {
+	speedBoostEnabled = !speedBoostEnabled;
+	speedBtn.Text = speedBoostEnabled ? "⚡ Speed Boost: ON" : "⚡ Speed Boost: OFF";
+	speedGrad.Color = speedBoostEnabled
+		? new ColorSequence(Color3.fromRGB(20, 120, 70), Color3.fromRGB(10, 70, 40))
+		: new ColorSequence(Color3.fromRGB(32, 32, 38), Color3.fromRGB(18, 18, 22));
+	speedStroke.Color = speedBoostEnabled ? Color3.fromRGB(50, 255, 150) : Color3.fromRGB(200, 160, 60);
 
-    local character = LocalPlayer.Character
-    if character and character:FindFirstChildOfClass("Humanoid") then
-        character:FindFirstChildOfClass("Humanoid").WalkSpeed = SPEED_BOOST_ENABLED and 32 or 16
-    end
-end)
+	const character = localPlayer.Character;
+	if (character && character.FindFirstChildOfClass("Humanoid")) {
+		(character.FindFirstChildOfClass("Humanoid") as Humanoid).WalkSpeed = speedBoostEnabled ? 32 : 16;
+	}
+});
 
-local defaultFog = Lighting.FogEnd
-local noFogActive = false
-FogBtn.MouseButton1Click:Connect(function()
-    noFogActive = not noFogActive
-    FogBtn.Text = noFogActive and "💡 Fullbright: ON" or "💡 Fullbright: OFF"
-    FogGrad.Color = noFogActive and ColorSequence.new(Color3.fromRGB(20, 120, 70), Color3.fromRGB(10, 70, 40)) or ColorSequence.new(Color3.fromRGB(32, 32, 38), Color3.fromRGB(18, 18, 22))
-    FogStroke.Color = noFogActive and Color3.fromRGB(50, 255, 150) or Color3.fromRGB(200, 160, 60)
+const defaultFog = Lighting.FogEnd;
+let noFogActive = false;
+fogBtn.MouseButton1Click.Connect(() => {
+	noFogActive = !noFogActive;
+	fogBtn.Text = noFogActive ? "💡 Fullbright: ON" : "💡 Fullbright: OFF";
+	fogGrad.Color = noFogActive
+		? new ColorSequence(Color3.fromRGB(20, 120, 70), Color3.fromRGB(10, 70, 40))
+		: new ColorSequence(Color3.fromRGB(32, 32, 38), Color3.fromRGB(18, 18, 22));
+	fogStroke.Color = noFogActive ? Color3.fromRGB(50, 255, 150) : Color3.fromRGB(200, 160, 60);
 
-    Lighting.FogEnd = noFogActive and 9e9 or defaultFog
-    Lighting.Brightness = noFogActive and 2 or 1
-end)
+	Lighting.FogEnd = noFogActive ? 9e9 : defaultFog;
+	Lighting.Brightness = noFogActive ? 2 : 1;
+});
