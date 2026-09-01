@@ -1,4 +1,4 @@
--- Noob Hub | Imperial Edition (Updated Weapon Priority & Yellow Outline Pickup)
+-- Noob Hub | Imperial Edition (Fixed Weapon Priority & Auto-Pickup)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -37,14 +37,16 @@ local TARGET_ITEMS = {
     "BurnedBone"
 }
 
--- Updated Weapon Priority List (GoldenClaws placed higher than StunStick)
+-- HIGHEST PRIORITY AT TOP: GoldenClaws is checked FIRST
 local WEAPON_PRIORITY = {
     "GoldenClaws",
+    "Golden Claws",
     "UltraFish",
     "TormentumAxe",
     "Murasama",
     "Ruinstrikers",
-    "StunStick"
+    "StunStick",
+    "Stun Stick"
 }
 
 --------------------------------------------------------------------------------
@@ -455,7 +457,7 @@ PickupBtn.MouseButton1Click:Connect(function()
 end)
 
 --------------------------------------------------------------------------------
--- GOD MODE & AUTO KILL
+-- GOD MODE & IMPROVED WEAPON SELECTION AUTO KILL
 --------------------------------------------------------------------------------
 GodModeBtn.MouseButton1Click:Connect(function()
     GODMODE_ENABLED = not GODMODE_ENABLED
@@ -482,14 +484,26 @@ local function getBestWeapon()
     local backpack = LocalPlayer:FindFirstChild("Backpack")
     if not character or not backpack then return nil end
 
-    for _, weaponName in ipairs(WEAPON_PRIORITY) do
-        local equipped = character:FindFirstChild(weaponName)
-        if equipped and equipped:IsA("Tool") then return equipped end
+    -- Iterate through weapon priorities from top to bottom
+    for _, targetName in ipairs(WEAPON_PRIORITY) do
+        local targetLower = string.lower(targetName)
         
-        local inBackpack = backpack:FindFirstChild(weaponName)
-        if inBackpack and inBackpack:IsA("Tool") then return inBackpack end
+        -- 1. Check currently equipped tools first
+        for _, child in ipairs(character:GetChildren()) do
+            if child:IsA("Tool") and string.find(string.lower(child.Name), targetLower) then
+                return child
+            end
+        end
+        
+        -- 2. Check Backpack
+        for _, child in ipairs(backpack:GetChildren()) do
+            if child:IsA("Tool") and string.find(string.lower(child.Name), targetLower) then
+                return child
+            end
+        end
     end
     
+    -- Fallback: return any available tool in Backpack if no priority match is found
     for _, tool in ipairs(backpack:GetChildren()) do
         if tool:IsA("Tool") then return tool end
     end
