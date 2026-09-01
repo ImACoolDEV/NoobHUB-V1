@@ -12,8 +12,8 @@ const localPlayer = Players.LocalPlayer;
 const playerGui = localPlayer.WaitForChild("PlayerGui") as PlayerGui;
 
 // Configuration Variables
-const TARGET_NAME = "THE_RAKE"; // Internal Target Model Name
-const DISPLAY_TARGET_NAME = "Rakoof"; // Visual Display Name
+const TARGET_NAME = "THE_RAKE";
+const DISPLAY_TARGET_NAME = "Rakoof";
 
 let autoKillEnabled = false;
 let godmodeEnabled = false;
@@ -39,7 +39,7 @@ const TARGET_ITEMS = [
 	"BurnedBone",
 ];
 
-// HIGHEST PRIORITY AT TOP: GoldenClaws is checked FIRST
+// WEAPON PRIORITY
 const WEAPON_PRIORITY = [
 	"GoldenClaws",
 	"Golden Claws",
@@ -63,12 +63,12 @@ const WEAPON_PRIORITY = [
 	"Stun Stick",
 ];
 
---------------------------------------------------------------------------------
--- CORE IMMUNE HEAD-ANCHOR LOGIC
---------------------------------------------------------------------------------
+// ============================================================================
+// CORE IMMUNE HEAD-ANCHOR LOGIC
+// ============================================================================
 function findBossRoot(): [Model?, BasePart?] {
 	for (const obj of Workspace.GetDescendants()) {
-		if (obj.IsA("Model") && (obj.Name === TARGET_NAME || string.lower(obj.Name) === string.lower(TARGET_NAME))) {
+		if (obj.IsA("Model") && obj.Name.lower() === TARGET_NAME.lower()) {
 			const targetPart =
 				(obj.FindFirstChild("Head") as BasePart) ||
 				(obj.FindFirstChild("HumanoidRootPart") as BasePart) ||
@@ -107,9 +107,9 @@ function applyImmuneHeadAnchor(targetModel: Model, targetRoot: BasePart): void {
 	hrp.CFrame = new CFrame(absoluteTopPosition, headPart.Position);
 }
 
---------------------------------------------------------------------------------
--- IMPERIAL / ROYAL GUI CREATION (NO PURPLE)
---------------------------------------------------------------------------------
+// ============================================================================
+// IMPERIAL / ROYAL GUI CREATION
+// ============================================================================
 const screenGui = new Instance("ScreenGui");
 screenGui.Name = "NoobHubImperial";
 screenGui.ResetOnSpawn = false;
@@ -146,7 +146,6 @@ frameStroke.Parent = mainFrame;
 const titleBar = new Instance("Frame");
 titleBar.Size = new UDim2(1, 0, 0, 48);
 titleBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255);
-titleBar.Active = true;
 titleBar.Parent = mainFrame;
 
 const titleGradient = new Instance("UIGradient");
@@ -209,9 +208,9 @@ uiGridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center;
 uiGridLayout.SortOrder = Enum.SortOrder.LayoutOrder;
 uiGridLayout.Parent = scrollingContainer;
 
---------------------------------------------------------------------------------
--- WINDOW CONTROLS
---------------------------------------------------------------------------------
+// ============================================================================
+// WINDOW CONTROLS
+// ============================================================================
 const closeBtn = new Instance("TextButton");
 closeBtn.Size = new UDim2(0, 32, 0, 32);
 closeBtn.Position = new UDim2(1, -40, 0, 8);
@@ -257,9 +256,9 @@ toggleButton.MouseButton1Click.Connect(() => {
 	mainFrame.Visible = !mainFrame.Visible;
 });
 
---------------------------------------------------------------------------------
--- BUTTON BUILDER
---------------------------------------------------------------------------------
+// ============================================================================
+// BUTTON BUILDER
+// ============================================================================
 function createButton(text: string, order: number): [TextButton, UIGradient, UIStroke] {
 	const btn = new Instance("TextButton");
 	btn.Size = new UDim2(0, 218, 0, 44);
@@ -311,9 +310,9 @@ const [speedBtn, speedGrad, speedStroke] = createButton("⚡ Speed Boost: OFF", 
 const [fogBtn, fogGrad, fogStroke] = createButton("💡 Fullbright: OFF", 10);
 const [pickupBtn, pickupGrad, pickupStroke] = createButton("🎁 Auto Pickup Items: OFF", 11);
 
---------------------------------------------------------------------------------
--- KEYBIND TOGGLE
---------------------------------------------------------------------------------
+// ============================================================================
+// KEYBIND TOGGLE
+// ============================================================================
 UserInputService.InputBegan.Connect((input, gameProcessed) => {
 	if (gameProcessed) return;
 	if (input.KeyCode === TOGGLE_KEY) {
@@ -321,9 +320,9 @@ UserInputService.InputBegan.Connect((input, gameProcessed) => {
 	}
 });
 
---------------------------------------------------------------------------------
--- TELEPORTS
---------------------------------------------------------------------------------
+// ============================================================================
+// TELEPORTS
+// ============================================================================
 function findLocationPart(targetName: string): Instance | undefined {
 	const miscFolder = Workspace.FindFirstChild("Misc");
 	if (miscFolder) {
@@ -373,12 +372,12 @@ safezoneBtn.MouseButton1Click.Connect(() => {
 
 	for (const obj of Workspace.GetDescendants()) {
 		if (obj.IsA("Model") && !Players.GetPlayerFromCharacter(obj)) {
-			const nameLower = string.lower(obj.Name);
+			const nameLower = obj.Name.lower();
 			if (
-				string.find(nameLower, "ready")[0] !== undefined ||
-				string.find(nameLower, "safe")[0] !== undefined ||
-				string.find(nameLower, "spawn")[0] !== undefined ||
-				string.find(nameLower, "npc")[0] !== undefined
+				nameLower.find("ready")[0] !== undefined ||
+				nameLower.find("safe")[0] !== undefined ||
+				nameLower.find("spawn")[0] !== undefined ||
+				nameLower.find("npc")[0] !== undefined
 			) {
 				const root =
 					(obj.FindFirstChild("HumanoidRootPart") as BasePart) ||
@@ -401,9 +400,9 @@ safezoneBtn.MouseButton1Click.Connect(() => {
 	}
 });
 
---------------------------------------------------------------------------------
--- ADVANCED YELLOW OUTLINE & DROPS AUTO PICKUP LOGIC
---------------------------------------------------------------------------------
+// ============================================================================
+// ADVANCED YELLOW OUTLINE & DROPS AUTO PICKUP LOGIC
+// ============================================================================
 function isInsidePlayerInventory(item: Instance): boolean {
 	let ancestor: Instance | undefined = item.Parent;
 	while (ancestor && ancestor !== Workspace) {
@@ -460,7 +459,7 @@ function getPickableItems(): Instance[] {
 				items.push(obj);
 			} else {
 				for (const targetName of TARGET_ITEMS) {
-					if (string.find(obj.Name, targetName)[0] !== undefined) {
+					if (obj.Name.find(targetName)[0] !== undefined) {
 						items.push(obj);
 						break;
 					}
@@ -501,9 +500,9 @@ pickupBtn.MouseButton1Click.Connect(() => {
 	}
 });
 
---------------------------------------------------------------------------------
--- GOD MODE & IMPROVED WEAPON SELECTION AUTO KILL
---------------------------------------------------------------------------------
+// ============================================================================
+// GOD MODE & IMPROVED WEAPON SELECTION AUTO KILL
+// ============================================================================
 godModeBtn.MouseButton1Click.Connect(() => {
 	godmodeEnabled = !godmodeEnabled;
 	godModeBtn.Text = godmodeEnabled ? "🛡️ God Mode: ON" : "🛡️ God Mode: OFF";
@@ -535,16 +534,16 @@ function getBestWeapon(): Tool | undefined {
 	if (!character || !backpack) return undefined;
 
 	for (const targetName of WEAPON_PRIORITY) {
-		const targetLower = string.lower(targetName);
+		const targetLower = targetName.lower();
 
 		for (const child of character.GetChildren()) {
-			if (child.IsA("Tool") && string.find(string.lower(child.Name), targetLower)[0] !== undefined) {
+			if (child.IsA("Tool") && child.Name.lower().find(targetLower)[0] !== undefined) {
 				return child;
 			}
 		}
 
 		for (const child of backpack.GetChildren()) {
-			if (child.IsA("Tool") && string.find(string.lower(child.Name), targetLower)[0] !== undefined) {
+			if (child.IsA("Tool") && child.Name.lower().find(targetLower)[0] !== undefined) {
 				return child;
 			}
 		}
@@ -607,9 +606,9 @@ autoKillBtn.MouseButton1Click.Connect(() => {
 	}
 });
 
---------------------------------------------------------------------------------
--- MISC UTILITIES
---------------------------------------------------------------------------------
+// ============================================================================
+// MISC UTILITIES
+// ============================================================================
 bringBtn.MouseButton1Click.Connect(() => {
 	bringBossEnabled = !bringBossEnabled;
 	bringBtn.Text = bringBossEnabled ? `🧲 Bring ${DISPLAY_TARGET_NAME}: ON` : `🧲 Bring ${DISPLAY_TARGET_NAME}: OFF`;
@@ -623,7 +622,8 @@ bringBtn.MouseButton1Click.Connect(() => {
 			const [, bossRoot] = findBossRoot();
 			const character = localPlayer.Character;
 			if (bossRoot && character && character.FindFirstChild("HumanoidRootPart")) {
-				bossRoot.CFrame = (character.FindFirstChild("HumanoidRootPart") as BasePart).CFrame.mul(new CFrame(0, 0, -3.5));
+				const hrp = character.FindFirstChild("HumanoidRootPart") as BasePart;
+				bossRoot.CFrame = hrp.CFrame.mul(new CFrame(0, 0, -3.5));
 			}
 		});
 	} else {
